@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-"""Command line interfaces to the BPLN programs."""
+# Copyright (c) 2011 Christopher D. Lasher
+#
+# This software is released under the MIT License. Please see
+# LICENSE.txt for details.
 
-__author__ = 'Chris Lasher'
-__email__ = 'chris DOT lasher <AT> gmail DOT com'
+
+"""Command line interfaces to the BPLN programs."""
 
 
 import bz2

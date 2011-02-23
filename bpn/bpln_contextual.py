@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+# Copyright (c) 2010-2011 Christopher D. Lasher
+#
+# This software is released under the MIT License. Please see
+# LICENSE.txt for details.
+
+
 """A program to find contextually linked biological processes.
 
 This method extends that of Biological Process Linkage Networks by
@@ -11,9 +17,6 @@ available from bpln.py.
 Process Linkage Networks. PLoS ONE 4, e5313 (2009).
 
 """
-
-__author__ = 'Chris Lasher'
-__email__ = 'chris DOT lasher <AT> gmail DOT com'
 
 import collections
 import math

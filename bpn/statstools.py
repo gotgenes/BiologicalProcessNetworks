@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-"""
-A module to contain miscellaneous statistical tests and tools.
+# Copyright (c) 2010 Christopher D. Lasher
+#
+# This software is released under the MIT License. Please see
+# LICENSE.txt for details.
 
-"""
 
-__author__ = 'Chris Lasher'
-__email__ = 'chris DOT lasher <AT> gmail DOT com'
+"""Contains miscellaneous statistical tests and tools."""
 
 # Configure all the logging stuff
 import logging

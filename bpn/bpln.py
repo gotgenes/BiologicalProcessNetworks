@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-"""
-An implementation of Biological Process Linkage Networks [1].
+# Copyright (c) 2010-2011 Christopher D. Lasher
+#
+# This software is released under the MIT License. Please see
+# LICENSE.txt for details.
+
+
+"""An implementation of Biological Process Linkage Networks [1].
 
 1. Dotan-Cohen, D., Letovsky, S., Melkman, A.A. & Kasif, S. Biological
 Process Linkage Networks. PLoS ONE 4, e5313 (2009).
 
 """
-
-__author__ = 'Chris Lasher'
-__email__ = 'chris DOT lasher <AT> gmail DOT com'
 
 import math
 

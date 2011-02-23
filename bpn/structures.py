@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+# Copyright (c) 2011 Christopher D. Lasher
+#
+# This software is released under the MIT License. Please see
+# LICENSE.txt for details.
+
+
 """Data structures for the BPLN programs."""
 
-__author__ = 'Chris Lasher'
-__email__ = 'chris DOT lasher <AT> gmail DOT com'
 
 import itertools
 import random
