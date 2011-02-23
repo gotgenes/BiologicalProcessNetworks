@@ -8,5 +8,5 @@
 
 
 import bpln
-import bpln_contextual
+import cbpn
 import mcmc_bpln

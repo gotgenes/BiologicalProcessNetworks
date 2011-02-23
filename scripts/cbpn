@@ -7,5 +7,5 @@
 # LICENSE.txt for details.
 
 
-import bpn.bpln_contextual
-bpn.bpln_contextual.main()
+import bpn.cbpn
+bpn.cbpn.main()

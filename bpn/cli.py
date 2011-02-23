@@ -19,7 +19,7 @@ import sys
 import conflictsparse
 from convutils import convutils
 
-import bpln_contextual
+import cbpn
 import logconf
 import mcmc_bpln
 import parsers
@@ -217,7 +217,7 @@ class ContextualArgParser(BplnArgParser, ExpressionBasedArgParser):
         """Create the command line interface for Contextual BPLN."""
         super(ContextualArgParser, self).make_cli_parser()
         self.cli_parser.add_option('--num-permutations', type='int',
-                default=bpln_contextual.NUM_PERMUTATIONS,
+                default=cbpn.NUM_PERMUTATIONS,
                 help=("number of permutations for statistics "
                     "[DEFAULT: %default]")
         )
