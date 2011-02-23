@@ -7,7 +7,7 @@
 # LICENSE.txt for details.
 
 
-"""Data structures for the BPLN programs."""
+"""Data structures for the BPN programs."""
 
 
 import itertools
@@ -16,7 +16,7 @@ import random
 import networkx
 
 import logging
-logger = logging.getLogger('bpln.structures')
+logger = logging.getLogger('bpn.structures')
 
 
 class InteractionGraph(networkx.Graph):

@@ -11,7 +11,7 @@
 
 # Configure all the logging stuff
 import logging
-logger = logging.getLogger('statstools')
+logger = logging.getLogger('bpn.statstools')
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
 handler.setLevel(logging.DEBUG)

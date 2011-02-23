@@ -20,7 +20,7 @@ setup(
         'numpy',
         'scipy'
     ],
-    packages=['bpn', 'bpn.tests'],
+    packages=['bpn', 'bpn.mcmc', 'bpn.tests'],
     scripts=scripts,
     url='http://pypi.python.org/pypi/BiologicalProcessNetworks',
     license='MIT License',

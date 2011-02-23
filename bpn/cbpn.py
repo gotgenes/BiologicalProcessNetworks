@@ -18,18 +18,6 @@ Process Linkage Networks. PLoS ONE 4, e5313 (2009).
 
 """
 
-import collections
-import math
-import random
-
-from convutils import convutils
-
-import cli
-
-# Configure all the logging stuff
-import logging
-logger = logging.getLogger('bpln.bpln_contextual')
-
 
 OUTFILE_FIELDS = (
         'term1',
@@ -52,6 +40,19 @@ ESTIMATE_INTERVAL = 500
 
 # The number of records of results to buffer before outputting.
 RESULTS_BUFFER_SIZE = 10
+
+
+import collections
+import math
+import random
+
+from convutils import convutils
+
+import cli
+
+# Configure all the logging stuff
+import logging
+logger = logging.getLogger('bpn.cbpn')
 
 
 def translate_gene_ids(

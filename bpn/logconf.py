@@ -7,7 +7,7 @@
 # LICENSE.txt for details.
 
 
-"""Logging configuration for BPLN programs."""
+"""Logging configuration for BPN programs."""
 
 import logging
 
@@ -30,7 +30,7 @@ def _set_up_root_file_logger(logger, logfile):
 
 
 def set_up_root_logger(logfile):
-    logger = logging.getLogger('bpln')
+    logger = logging.getLogger('bpn')
     logger.setLevel(logging.INFO)
     _set_up_root_stream_logger(logger)
     _set_up_root_file_logger(logger, logfile)

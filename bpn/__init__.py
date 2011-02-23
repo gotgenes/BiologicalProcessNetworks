@@ -9,4 +9,4 @@
 
 import bpln
 import cbpn
-import mcmc_bpln
+import mcmc

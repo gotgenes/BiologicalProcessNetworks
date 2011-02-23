@@ -14,17 +14,9 @@ Process Linkage Networks. PLoS ONE 4, e5313 (2009).
 
 """
 
-import math
 
-from convutils import convutils
-
-import cli
-import statstools
-
-
-# Configure all the logging stuff
-import logging
-logger = logging.getLogger('bpln.bpln')
+# The number of records of results to buffer before outputting.
+RESULTS_BUFFER_SIZE = 100000
 
 OUTFILE_FIELDS = (
         'term1',
@@ -38,8 +30,18 @@ OUTFILE_FIELDS = (
         'p_value'
 )
 
-# The number of records of results to buffer before outputting.
-RESULTS_BUFFER_SIZE = 100000
+
+import math
+
+from convutils import convutils
+
+import cli
+import statstools
+
+
+# Configure all the logging stuff
+import logging
+logger = logging.getLogger('bpn.bpln')
 
 
 def calculate_linkage_scores(

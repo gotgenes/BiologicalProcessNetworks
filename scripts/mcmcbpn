@@ -7,5 +7,5 @@
 # LICENSE.txt for details.
 
 
-import bpn.mcmc_bpln
-bpn.mcmc_bpln.main()
+import bpn.mcmc.mcmcbpn
+bpn.mcmc.mcmcbpn.main()

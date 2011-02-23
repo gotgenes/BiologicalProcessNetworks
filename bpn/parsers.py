@@ -7,7 +7,7 @@
 # LICENSE.txt for details.
 
 
-"""Parsers for the BPLN programs."""
+"""Parsers for the BPN programs."""
 
 import itertools
 
@@ -16,7 +16,7 @@ from convutils import convstructs, convutils
 import structures
 
 import logging
-logger = logging.getLogger('bpln.parsers')
+logger = logging.getLogger('bpn.parsers')
 
 
 class DuplicateIDError(StandardError):

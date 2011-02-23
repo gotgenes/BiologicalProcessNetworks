@@ -10,6 +10,9 @@
 """Command line interfaces to the BPLN programs."""
 
 
+LINKS_OUTFILE='links_results.tsv'
+
+
 import bz2
 import datetime
 import itertools
@@ -21,15 +24,12 @@ from convutils import convutils
 
 import cbpn
 import logconf
-import mcmc_bpln
+import mcmc.mcmcbpn
 import parsers
 import structures
 
 import logging
-logger = logging.getLogger('bpln.cli')
-
-
-LINKS_OUTFILE='links_results.tsv'
+logger = logging.getLogger('bpn.cli')
 
 
 class BaseArgParser(object):
@@ -211,7 +211,7 @@ ARGUMENTS:
 class ContextualArgParser(BplnArgParser, ExpressionBasedArgParser):
     """Command line parser for Contextual BPLN."""
 
-    _prog_name = 'contextualbpln'
+    _prog_name = 'cbpn'
 
     def make_cli_parser(self):
         """Create the command line interface for Contextual BPLN."""
@@ -249,24 +249,24 @@ class ContextualArgParser(BplnArgParser, ExpressionBasedArgParser):
 class McmcArgParser(ExpressionBasedArgParser):
     """Command line parser for MCMC BPLN."""
 
-    _prog_name = 'mcmcbpln'
+    _prog_name = 'mcmcbpn'
 
     def make_cli_parser(self):
         """Create the command line interface for MCMC BPLN."""
         super(McmcArgParser, self).make_cli_parser()
         self.cli_parser.add_option('--burn-in', type='int',
-                default=mcmc_bpln.BURN_IN,
+                default=mcmc.mcmcbpn.BURN_IN,
                 help=("the number of steps to take before recording states "
                     "in the Markov chain [default: %default]")
         )
         self.cli_parser.add_option('--steps', type='int',
-                default=mcmc_bpln.NUM_STEPS,
+                default=mcmc.mcmcbpn.NUM_STEPS,
                 help=("the number of steps through the Markov chain to "
                     "observe")
         )
         self.cli_parser.add_option('--activity-threshold',
                 type='float',
-                default=mcmc_bpln.ACTIVITY_THRESHOLD,
+                default=mcmc.mcmcbpn.ACTIVITY_THRESHOLD,
                 help=("set the (differential) expression threshold at "
                     "which a gene is considered active [default: "
                     "%default=`math.log10(0.05)`]")
@@ -288,12 +288,12 @@ class McmcArgParser(ExpressionBasedArgParser):
                 )
         )
         self.cli_parser.add_option('--parameters-outfile',
-                default=mcmc_bpln.PARAMETERS_OUTFILE,
+                default=mcmc.mcmcbpn.PARAMETERS_OUTFILE,
                 help=("the file to which the parameters results should "
                     "be written [default: %default]")
         )
         self.cli_parser.add_option('--transitions-outfile',
-                default=mcmc_bpln.TRANSITIONS_OUTTFILE,
+                default=mcmc.mcmcbpn.TRANSITIONS_OUTTFILE,
                 help=("the file to which the transitions data should "
                     "be written [default: %default]")
         )
