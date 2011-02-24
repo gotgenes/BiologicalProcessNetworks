@@ -69,8 +69,8 @@ alternatively install into the user-specific site-packages location with
    <http://dx.doi.org/10.1371/journal.pone.0015247>`_
 
 .. _PyPI:
-.. _ConflictsOptionParser: http://pypi.python.org/pypi/ConflictsOptionParser/
 .. _Python Package Index: http://pypi.python.org/
+.. _ConflictsOptionParser: http://pypi.python.org/pypi/ConflictsOptionParser/
 .. _ConvUtils: http://pypi.python.org/pypi/ConvUtils/
 .. _NetworkX: http://networkx.lanl.gov/
 .. _SciPy: http://scipy.org/
