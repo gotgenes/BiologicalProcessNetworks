@@ -30,6 +30,7 @@ Installation
 BPN requires the following external Python Packages, all available from
 the `Python Package Index`_:
 
+- ConflictsOptionParser_
 - ConvUtils_
 - NetworkX_ (v.1.0 or greater)
 - SciPy_
@@ -68,6 +69,7 @@ alternatively install into the user-specific site-packages location with
    <http://dx.doi.org/10.1371/journal.pone.0015247>`_
 
 .. _PyPI:
+.. _ConflictsOptionParser: http://pypi.python.org/pypi/ConflictsOptionParser/
 .. _Python Package Index: http://pypi.python.org/
 .. _ConvUtils: http://pypi.python.org/pypi/ConvUtils/
 .. _NetworkX: http://networkx.lanl.gov/
