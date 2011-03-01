@@ -19,8 +19,8 @@ import states
 import logging
 logger = logging.getLogger('bpn.mcmcbpn.chains')
 
-from mcmcbpn import SUPERDEBUG, SUPERDEBUG_MODE, NUM_STEPS, BURN_IN, \
-        BROADCAST_PERCENT
+from defaults import NUM_STEPS, BURN_IN, BROADCAST_PERCENT, \
+        SUPERDEBUG, SUPERDEBUG_MODE
 
 
 class MarkovChain(object):

@@ -9,4 +9,9 @@
 
 import bpln
 import cbpn
+import cli
+import logconf
+import parsers
+import statstools
+import structures
 import mcmc
