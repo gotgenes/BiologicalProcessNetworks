@@ -62,11 +62,20 @@ ARGUMENTS:
         should have two columns with headings "interactor1" and
         "interactor2". The file may have additional columns, which will
         be ignored.
-    ANNOTATIONS_FILE: a CSV file of annotations. The file should have a
-        column titled "gene_id" which has the gene/gene product ID, and a
-        column titled "term" which contains the term with which the
-        gene/product is annotated. The file may have additional columns,
-        which will be ignored.\
+    ANNOTATIONS_FILE: a file containing annotations. The annotations
+        file may be in one of two formats:
+        - GMT format: if the file ends with the extension ".gmt", it is
+          automatically parsed as a GMT-format file. The file is a
+          tab-separated (TSV) format with no headers. The first column
+          contains the annotation term. The second column contains a
+          description. All following columns contain gene IDs for genes
+          annotated by that term. Full GMT format specification is
+          available from the MSigDB and GSEA website.
+        - Two-column format: The file should have a column titled
+          "gene_id" which has the gene/gene product ID, and a column
+          titled "term" which contains the term with which the
+          gene/product is annotated. The file may have additional
+          columns, which will be ignored.\
 """
         self.cli_parser = conflictsparse.ConflictsOptionParser(usage)
         self.cli_parser.add_option('--links-outfile',
@@ -185,11 +194,20 @@ ARGUMENTS:
         "weight", whose values will be used as the weight or confidence
         of the interaction. The file may have additional columns, which
         will be ignored.
-    ANNOTATIONS_FILE: a CSV file of annotations. The file should have a
-        column titled "gene_id" which has the gene/gene product ID, and a
-        column titled "term" which contains the term with which the
-        gene/product is annotated. The file may have additional columns,
-        which will be ignored.
+    ANNOTATIONS_FILE: a file containing annotations. The annotations
+        file may be in one of two formats:
+        - GMT format: if the file ends with the extension ".gmt", it is
+          automatically parsed as a GMT-format file. The file is a
+          tab-separated (TSV) format with no headers. The first column
+          contains the annotation term. The second column contains a
+          description. All following columns contain gene IDs for genes
+          annotated by that term. Full GMT format specification is
+          available from the MSigDB and GSEA website.
+        - Two-column format: The file should have a column titled
+          "gene_id" which has the gene/gene product ID, and a column
+          titled "term" which contains the term with which the
+          gene/product is annotated. The file may have additional
+          columns, which will be ignored.
     EXPRESSION_FILE: a CSV file of gene (or gene product) expression
         values. The file should have a column titled "id" which has the
         gene (or gene product) ID, and a column titled "expression"
@@ -421,12 +439,13 @@ class BplnCli(object):
         self.links_outfile = open(self.opts.links_outfile, 'wb')
 
         # Create interaction graph
-        logger.info("Parsing interactions from %s." %
-                interactions_file.name)
+        logger.info("Parsing interactions from {0}.".format(
+                interactions_file.name))
         self.interaction_graph = \
                 parsers.parse_interactions_file_to_graph(
                         interactions_file)
-        logger.info("%d genes (products) with %d interactions parsed." % (
+        logger.info("{0} genes (products) with {1} interactions "
+                "parsed.".format(
                     len(self.interaction_graph),
                     self.interaction_graph.number_of_edges()
                 )
@@ -434,16 +453,23 @@ class BplnCli(object):
 
         # Create dictionary of annotations to genes, but only for genes in
         # the interaction graph
-        logger.info("Parsing annotations from %s." % annotations_file.name)
-        self.annotations_dict = parsers.parse_annotations_to_dict(
-                annotations_file)
+        logger.info("Parsing annotations from {0}.".format(
+                annotations_file.name))
+        if annotations_file.name.endswith('.gmt'):
+            self.annotations_dict = parsers.parse_gmt_to_dict(
+                    annotations_file)
+        else:
+            self.annotations_dict = parsers.parse_annotations_to_dict(
+                    annotations_file)
 
         self.annotations_stats = structures.get_annotations_stats(
                 self.annotations_dict)
-        logger.info("%(num_total_annotations)d annotations processed "
-                "over %(num_genes)d genes (or gene products), with "
-                "%(num_annotation_terms)d different terms." %
-                self.annotations_stats
+        logger.info(
+                ("{num_total_annotations} annotations processed, "
+                "for {num_genes} genes (or gene products), by "
+                "{num_annotation_terms} different terms.".format(
+                    **self.annotations_stats
+                ))
         )
 
         # Remove from the graph the set of nodes that have no annotation.
@@ -451,24 +477,26 @@ class BplnCli(object):
                 "interaction graph.")
         self.interaction_graph.prune_unannotated_genes(
                 self.annotations_dict)
-        logger.info("%d genes (products) with %d interactions "
-                "remaining in graph." % (
+        logger.info("{0} genes (products) with {1} interactions "
+                "remaining in graph.".format(
                     len(self.interaction_graph),
                     self.interaction_graph.number_of_edges()
                 )
         )
 
         # Remove from the annotations any genes which are not in the graph.
-        logger.info("Removing genes with no interactions from the sets of "
-                "annotated genes.")
+        logger.info("Removing genes with no interactions from the "
+                "sets of annotated genes.")
         self.interaction_graph.prune_non_network_genes_from_annotations(
                 self.annotations_dict)
         self.annotations_stats = structures.get_annotations_stats(
                 self.annotations_dict)
-        logger.info("%(num_total_annotations)d annotations "
-                "over %(num_genes)d genes (or gene products), with "
-                "%(num_annotation_terms)d different terms remain." %
-                self.annotations_stats
+        logger.info("{num_total_annotations} annotations, "
+                "for {num_genes} genes (or gene products), by "
+                "{num_annotation_terms} different terms "
+                "remain.".format(
+                    **self.annotations_stats
+                )
         )
 
         # Sanity test: the number of genes (products) in the

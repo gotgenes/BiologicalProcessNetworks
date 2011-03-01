@@ -27,6 +27,16 @@ class DuplicateIDError(StandardError):
     pass
 
 
+class InvalidFormatError(ValueError):
+    """Error raised for an improperly formatted file."""
+    pass
+
+
+class GmtFormatError(InvalidFormatError):
+    """Error raised for an improperly formatted GMT file."""
+    pass
+
+
 def parse_interactions_file_to_graph(interactions_fileh):
     """Parse a CSV interactions file to a graph.
 
@@ -83,6 +93,50 @@ def parse_annotations_to_dict(annotations_fileh):
             annotations_dict.add_item(term, gene)
         else:
             annotations_dict[term] = set([gene])
+
+    return annotations_dict
+
+
+def parse_gmt_to_dict(gmt_fileh):
+    """Parse a GMT-format annotations file to a dictionary.
+
+    The Gene Matrix Transposed (GMT) format specification can be found
+    on the MSigDB and GSEA website at
+    http://www.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29
+
+    The GMT format is a tab-separated (TSV) file. The first column
+    contains the annotation term. The second column contains the
+    description of the term. All following columns contain gene IDs for
+    genes which that term annotates.
+
+    Returns a `convstructs.TwoWaySetDict` instance with annotation as
+    strings and `set`s of genes as values.
+
+    :Parameters:
+    - `gmt_fileh`: a GMT-format file with the annotation term as the
+      first column, description as the second column, and genes
+      annotated by the term in all following columns
+
+    """
+    annotations_dict = convstructs.TwoWaySetDict()
+    for i, line in enumerate(gmt_fileh):
+        line = line.strip()
+        try:
+            term, description, genes = line.split('\t', 2)
+            # Skip lines where the term annotates no genes; happens
+            # occasionally.
+            if not genes:
+                continue
+            # genes is still a whole string; split it up.
+            genes = genes.split('\t')
+            if term in annotations_dict:
+                annotations_dict.update(genes)
+            else:
+                annotations_dict[term] = set(genes)
+        except ValueError as e:
+            logger.critical("Error parsing {0} at line {1}!".format(
+                    gmt_fileh.name, i+1))
+            raise GmtFormatError(e)
 
     return annotations_dict
 
