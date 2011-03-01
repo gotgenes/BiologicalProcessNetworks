@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-# Copyright (c) 2010 Christopher D. Lasher
+# Copyright (c) 2010-2011 Christopher D. Lasher
 #
 # This software is released under the MIT License. Please see
 # LICENSE.txt for details.
@@ -18,14 +18,9 @@ handler.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 
 try:
-    import numpy
+    import fisher
 except ImportError:
-    logger.warning("numpy not found; some functionality unavailable.")
-
-try:
-    from rpy import r
-except ImportError:
-    logger.warning("rpy not found; some functionality unavailable.")
+    logger.warning("fisher not found; some functionality unavailable.")
 
 
 class MissingRequiredLibrariesError(Exception):
@@ -149,14 +144,9 @@ def calculate_overlap_scores(gene_set1, gene_set2,
       "universe" of the gene sets
     """
     try:
-        numpy
+        fisher
     except NameError:
-        raise MissingRequiredLibrariesError("numpy must be installed "
-                "to use this function!")
-    try:
-        r
-    except NameError:
-        raise MissingRequiredLibrariesError("rpy must be installed "
+        raise MissingRequiredLibrariesError("fisher must be installed "
                 "to use this function!")
 
     scores = {
@@ -177,13 +167,9 @@ def calculate_overlap_scores(gene_set1, gene_set2,
     assert num_1_not_2 >= 0
     assert num_2_not_1 >= 0
     assert num_not_1_not_2 >= 0
-    fisher_table = numpy.asarray((
-            (num_1_and_2, num_1_not_2),
-            (num_2_not_1, num_not_1_not_2)
-        ))
-    fisher_score = r.fisher_test(
-            fisher_table, alternative='greater')['p.value']
-    scores['p_value'] = fisher_score
+    fisher_pvalues = fisher.pvalue(num_1_and_2, num_1_not_2, num_2_not_1,
+            num_not_1_not_2)
+    scores['p_value'] = fisher_pvalues.right_tail
 
     union_size = len(gene_set1.union(gene_set2))
     scores['intersection'] = num_1_and_2

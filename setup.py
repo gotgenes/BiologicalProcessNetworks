@@ -16,6 +16,7 @@ setup(
     install_requires=[
         'ConflictsOptionParser',
         'ConvUtils',
+        'fisher',
         'networkx>=1.0',
         'numpy',
         'scipy'
