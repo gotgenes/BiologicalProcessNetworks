@@ -222,7 +222,7 @@ ARGUMENTS:
         if len(args) != 3:
             self.cli_parser.error(
                     "Please provide paths to an interactions file, "
-                    "and an annotations file, and an expressions file."
+                    "an annotations file, and an expressions file."
             )
 
 
@@ -436,8 +436,6 @@ class BplnCli(object):
     def _process_input_files(self):
         interactions_file = open(self.args[0], 'rb')
         annotations_file = open(self.args[1], 'rb')
-        self.links_outfile = open(self.opts.links_outfile, 'wb')
-
         # Create interaction graph
         logger.info("Parsing interactions from {0}.".format(
                 interactions_file.name))
@@ -514,6 +512,11 @@ class BplnCli(object):
         annotations_file.close()
 
 
+    def _open_output_files(self):
+        """Opens the output files."""
+        self.links_outfile = open(self.opts.links_outfile, 'wb')
+
+
     def _construct_data_struct(self):
         data = structures.BplnInputData(
                 interaction_graph=self.interaction_graph,
@@ -542,6 +545,7 @@ class BplnCli(object):
         logger.info(' '.join(argv))
         self._process_input_files()
         self._construct_links_of_interest()
+        self._open_output_files()
         data = self._construct_data_struct()
         return data
 
@@ -606,8 +610,8 @@ class McmcCli(ContextualCli):
         self.cli_parser = McmcArgParser()
 
 
-    def _process_input_files(self):
-        super(McmcCli, self)._process_input_files()
+    def _open_output_files(self):
+        super(McmcCli, self)._open_output_files()
         self.parameters_outfile = open(self.opts.parameters_outfile,
                 'wb')
         if self.opts.bzip2:
