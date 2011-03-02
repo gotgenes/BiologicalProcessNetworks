@@ -47,7 +47,7 @@ class BaseArgParser(object):
         """Return the default logfile name."""
         curr_time_str = datetime.datetime.now().strftime(
                 '%Y-%m-%d-%H%M%S%f')
-        log_file_name = '{0}_log-{1}.txt'.format(self._prog_name,
+        log_file_name = '{0}-{1}.log'.format(self._prog_name,
                 curr_time_str)
         return log_file_name
 
