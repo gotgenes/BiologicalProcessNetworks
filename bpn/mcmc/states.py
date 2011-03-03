@@ -528,7 +528,7 @@ class PLNLinksState(State):
         self.selected_links.add((annotation1, annotation2))
         self.unselected_links.remove((annotation1, annotation2))
         link_annotated_interactions = \
-            self._annotated_interactions.get_interactions_annotated_by(
+            self._annotated_interactions.get_coannotated_interactions(
                     annotation1, annotation2)
         for interaction in link_annotated_interactions:
             self._interaction_selection_counts[interaction] += 1
@@ -560,7 +560,7 @@ class PLNLinksState(State):
         self.unselected_links.add((annotation1, annotation2))
         self.selected_links.remove((annotation1, annotation2))
         link_annotated_interactions = \
-            self._annotated_interactions.get_interactions_annotated_by(
+            self._annotated_interactions.get_coannotated_interactions(
                     annotation1, annotation2)
         for interaction in link_annotated_interactions:
             self._interaction_selection_counts[interaction] -= 1
@@ -824,7 +824,7 @@ class ArrayLinksState(PLNLinksState):
         self.link_selections[index] = True
         self._num_selected_links += 1
         link_annotated_interactions = \
-            self._annotated_interactions.get_interactions_annotated_by(
+            self._annotated_interactions.get_coannotated_interactions(
                     index)
         for interaction in link_annotated_interactions:
             self._interaction_selection_counts[interaction] += 1
@@ -851,7 +851,7 @@ class ArrayLinksState(PLNLinksState):
         self.link_selections[index] = False
         self._num_selected_links -= 1
         link_annotated_interactions = \
-            self._annotated_interactions.get_interactions_annotated_by(
+            self._annotated_interactions.get_coannotated_interactions(
                     index)
         for interaction in link_annotated_interactions:
             self._interaction_selection_counts[interaction] -= 1

@@ -287,7 +287,7 @@ class McmcArgParser(ExpressionBasedArgParser):
                 default=mcmc.defaults.ACTIVITY_THRESHOLD,
                 help=("set the (differential) expression threshold at "
                     "which a gene is considered active [default: "
-                    "%default=`math.log10(0.05)`]")
+                    "%default=-log10(0.05)]")
         )
         self.cli_parser.add_option('--free-parameters',
                 action='store_true',

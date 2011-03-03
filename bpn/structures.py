@@ -468,11 +468,24 @@ class AnnotatedInteractionsGraph(object):
         # interactions present, since this is apparently not cached by
         # the NetworkX Graph class.
         self._num_interactions = None
-        # We use this dictionary for fast lookup of what interactions
-        # are co-annotated by any given pair of annotation terms.
-        self._annotations_to_interactions = collections.defaultdict(set)
         self._create_interaction_annotations(links_of_interest)
         self._num_annotation_pairs = None
+
+
+    def _post_process_structures(self):
+        """Performs any necessary post-processing of data structures
+        created in `_create_interaction_annotations()`
+
+        """
+        logger.info("Post-processing data structures.")
+        # A problem with collections.defaultdict is that it creates a
+        # new entry during a key lookup if that key doesn't exist; we'll
+        # convert our structures back to regular Python dictionaries
+        # before letting the user access them.
+        self._annotations_to_interactions = dict(
+                self._annotations_to_interactions)
+        self._intraterm_interactions = dict(
+                self._intraterm_interactions)
 
 
     def _create_interaction_annotations(self, links_of_interest=None):
@@ -485,6 +498,12 @@ class AnnotatedInteractionsGraph(object):
           interactions
 
         """
+        # We use this dictionary for fast lookup of what interactions
+        # are co-annotated by any given pair of annotation terms.
+        self._annotations_to_interactions = collections.defaultdict(set)
+        # We use a separate dictionary for interactions co-annotated by
+        # the same term.
+        self._intraterm_interactions = collections.defaultdict(set)
         total_num_interactions = self.calc_num_interactions()
         broadcast_percent_complete = 0
         for i, edge in enumerate(self._interaction_graph.edges_iter()):
@@ -496,8 +515,11 @@ class AnnotatedInteractionsGraph(object):
                     gene2_annotations)
             for gene1_annotation, gene2_annotation in \
                     pairwise_combinations:
-                # If these are the same term, skip it.
+                # If these are the same term, add them to the intraterm
+                # interactions.
                 if gene1_annotation == gene2_annotation:
+                    self._intraterm_interactions[gene1_annotation].add(
+                            edge)
                     continue
                 # We want to preserve alphabetical order of the
                 # annotations.
@@ -521,6 +543,8 @@ class AnnotatedInteractionsGraph(object):
                 broadcast_percent_complete = percent_complete
                 logger.info("%d%% of interactions processed." % (
                         percent_complete))
+
+        self._post_process_structures()
 
 
     def get_all_links(self):
@@ -550,21 +574,34 @@ class AnnotatedInteractionsGraph(object):
         return self._num_interactions
 
 
-    def get_interactions_annotated_by(self, annotation1, annotation2):
-        """Returns a `set` of all interactions for which one adjacent
-        gene is annotated with `annotation1`, and the other adjacent
-        gene is annotated with `annotation2`.
+    def get_coannotated_interactions(self, term1, term2):
+        """Returns a `set` of all interactions for which one gene is
+        annotated with `term1`, and the other gene is annotated with
+        `term2`.
 
         :Parameters:
-        - `annotation1`: an annotation term
-        - `annotation2`: an annotation term
+        - `term1`: an annotation term
+        - `term2`: an annotation term
 
         """
-        if annotation1 > annotation2:
-            annotation1, annotation2 = annotation2, annotation1
-        interactions = self._annotations_to_interactions[(annotation1,
-                annotation2)]
+        if term1 > term2:
+            term1, term2 = term2, term1
+        elif term1 == term2:
+            raise ValueError("Terms may not be the same.")
+        interactions = self._annotations_to_interactions[(term1,
+                term2)]
         return interactions
+
+
+    def get_intraterm_interactions(self, term):
+        """Returns a `set` of all interactions for which the `term`
+        annotates both interacting genes.
+
+        :Parameters:
+        - `term`: an annotation term
+
+        """
+        return self._intraterm_interactions[term]
 
 
     def get_active_interactions(self, cutoff, greater=True):
@@ -652,33 +689,7 @@ class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
     which are accessed by integer indices.
 
     """
-    def __init__(
-            self,
-            interaction_graph,
-            annotations_dict,
-            links_of_interest=None
-        ):
-        """Create a new instance.
-
-        :Parameters:
-        - `interaction_graph`: graph containing the gene-gene or gene
-          product-gene product interactions
-        - `annotations_dict`: a dictionary with annotation terms as keys
-          and `set`s of genes as values
-        - `links_of_interest`: a `set` of links in which the user is
-          only interested; restricts the lookup keys to this set of
-          interactions, potentially significantly reducing the memory
-          usage. [NOTE: Each link's terms MUST be sorted alphabetically
-          (e.g., `('term1', 'term2')` and NOT `('term2',
-          'term1')`!]
-
-        """
-        AnnotatedInteractionsGraph.__init__(
-                self,
-                interaction_graph,
-                annotations_dict,
-                links_of_interest
-        )
+    def _post_process_structures(self):
         logger.info("Converting to more efficient data structures.")
         # Set two new attributes below, one being the list of all links,
         # and the other being the list of each link's corresponding
@@ -696,6 +707,7 @@ class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
         # Delete the dictionary mapping since we will not use it
         # hereafter.
         del self._annotations_to_interactions
+        # TODO: convert intraterm interactions?
 
 
     def get_all_links(self):
@@ -717,10 +729,11 @@ class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
         return self._num_annotation_pairs
 
 
-    def get_interactions_annotated_by(self, link_index):
-        """Returns a `set` of all interactions for which one adjacent
-        gene is annotated with one term in the link and the other
-        gene is annotated with the second term in the link.
+    def get_coannotated_interactions(self, link_index):
+        """Returns a `set` of all interactions for which one gene is
+        annotated with the first term, and the other gene is annotated
+        with the second term, for the pair of terms represented by the
+        index.
 
         :Parameters:
         - `link_index`: the index of the link whose interactions are
@@ -729,4 +742,6 @@ class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
         """
         return self._link_interactions[link_index]
 
+
+    # TODO: Add support for intraterm interactions
 
