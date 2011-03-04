@@ -15,7 +15,7 @@ import numpy
 import logging
 logger = logging.getLogger('bpn.mcmcbpn.recorders')
 
-from mcmcbpn import SUPERDEBUG, SUPERDEBUG_MODE
+from defaults import SUPERDEBUG, SUPERDEBUG_MODE
 
 
 class StateRecorder(object):
