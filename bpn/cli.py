@@ -92,9 +92,9 @@ ARGUMENTS:
         )
 
 
-    def check_num_arguments(self, args):
+    def check_num_arguments(self):
         """Verifies that the number of arguments given is correct."""
-        if len(args) != 2:
+        if len(self.args) != 2:
             self.cli_parser.error("Please provide paths to an "
                     "interactions file and an annotations file.")
 
@@ -107,13 +107,23 @@ ARGUMENTS:
                         "not have read permissions to it." % fname)
 
 
-    def check_arguments(self, args):
+    def check_arguments(self):
         """Verifies the arguments given are compatible with the
         program.
 
         """
-        self.check_num_arguments(args)
-        self.are_readable_files(args)
+        self.check_num_arguments()
+        self.are_readable_files(self.args)
+
+
+    def _post_process_opts_and_args(self):
+        """Process the options and arguments after parsing.
+
+        A convenience method, meant to act as a hook for subclasses that
+        need to manipulate the options and arguments before returning
+        them.
+        """
+        pass
 
 
     def parse_args(self, argv=None):
@@ -124,9 +134,10 @@ ARGUMENTS:
         - `argv`: the command line arguments [OPTIONAL]
 
         """
-        opts, args = self.cli_parser.parse_args(argv)
-        self.check_arguments(args)
-        return opts, args
+        self.opts, self.args = self.cli_parser.parse_args(argv)
+        self.check_arguments()
+        self._post_process_opts_and_args()
+        return self.opts, self.args
 
 
 class BplnArgParser(BaseArgParser):
@@ -217,9 +228,9 @@ ARGUMENTS:
         self.cli_parser.set_usage(usage)
 
 
-    def check_num_arguments(self, args):
+    def check_num_arguments(self):
         """Verifies that the number of arguments given is correct."""
-        if len(args) != 3:
+        if len(self.args) != 3:
             self.cli_parser.error(
                     "Please provide paths to an interactions file, "
                     "an annotations file, and an expressions file."
