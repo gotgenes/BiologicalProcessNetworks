@@ -40,16 +40,12 @@ class BaseArgParser(object):
 
     def __init__(self):
         """Create a new instance."""
-        self.make_cli_parser()
-
-
-    def make_default_log_name(self):
-        """Return the default logfile name."""
-        curr_time_str = datetime.datetime.now().strftime(
+        self.timestamp = datetime.datetime.now().strftime(
                 '%Y-%m-%d-%H%M%S%f')
-        log_file_name = '{0}-{1}.log'.format(self._prog_name,
-                curr_time_str)
-        return log_file_name
+        self.logfile_template = '{0}-{{0}}.log'.format(self._prog_name)
+        self.default_logfile_name = self.logfile_template.format(
+                self.timestamp)
+        self.make_cli_parser()
 
 
     def make_cli_parser(self):
@@ -83,12 +79,10 @@ ARGUMENTS:
                 help=("the file to which the links results should "
                     "be written [default: %default]")
         )
-        default_logfile = self.make_default_log_name()
         self.cli_parser.add_option('--logfile',
-                default=default_logfile,
+                default=self.logfile_template.format('TIMESTAMP'),
                 help=("the file to which information for the run will "
-                    "be logged [default: %default, where time stamp "
-                    "is current]")
+                    "be logged [default: %default]")
         )
 
 
@@ -248,7 +242,7 @@ class ContextualArgParser(BplnArgParser, ExpressionBasedArgParser):
         self.cli_parser.add_option('--num-permutations', type='int',
                 default=cbpn.NUM_PERMUTATIONS,
                 help=("number of permutations for statistics "
-                    "[DEFAULT: %default]")
+                    "[default: %default]")
         )
         self.cli_parser.add_option('-s', '--edge-swaps', type='int',
                 help=("Perform the given number of edge swaps to "
@@ -278,7 +272,7 @@ class ContextualArgParser(BplnArgParser, ExpressionBasedArgParser):
 class McmcArgParser(ExpressionBasedArgParser):
     """Command line parser for MCMC BPLN."""
 
-    _prog_name = 'defaults'
+    _prog_name = 'mcmcbpn'
 
     def make_cli_parser(self):
         """Create the command line interface for MCMC BPLN."""
@@ -341,6 +335,13 @@ class BplnCli(object):
     def __init__(self):
         self.cli_parser = BplnArgParser()
 
+    def _begin_logging(self):
+        """Hook method to control setting up logging."""
+        if self.opts.logfile:
+            logconf.set_up_root_logger(self.opts.logfile)
+        else:
+            logfile_name = self.cli_parser.default_logfile_name
+
 
     def parse_selected_links(self, selected_links_file_name):
         logger.info("Parsing selected links file %s." %
@@ -354,10 +355,8 @@ class BplnCli(object):
         return links, num_links
 
 
-    def _calc_num_links_selected_terms(self,
-            num_selected_terms):
-        num_links = num_selected_terms * \
-                (num_selected_terms - 1)
+    def _calc_num_links_selected_terms(self, num_selected_terms):
+        num_links = num_selected_terms * (num_selected_terms - 1)
         return num_links
 
 
@@ -550,7 +549,7 @@ class BplnCli(object):
 
         """
         self.opts, self.args = self.cli_parser.parse_args(argv)
-        logconf.set_up_root_logger(self.opts.logfile)
+        self._begin_logging()
         if argv is None:
             argv = sys.argv
         logger.info(' '.join(argv))
