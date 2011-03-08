@@ -80,9 +80,10 @@ ARGUMENTS:
                     "be written [default: %default]")
         )
         self.cli_parser.add_option('--logfile',
-                default=self.logfile_template.format('TIMESTAMP'),
                 help=("the file to which information for the run will "
-                    "be logged [default: %default]")
+                    "be logged [default: {0}]".format(
+                        self.logfile_template.format('TIMESTAMP'))
+                )
         )
 
 
