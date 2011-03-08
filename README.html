@@ -314,11 +314,11 @@ expression, and annotation data.</p>
 <dl class="docutils">
 <dt>bpln</dt>
 <dd>Determines if processes are generally connected; an implementation of
-the algorithm described by Dikla Dotan-Cohen, <em>et al.</em> <a class="footnote-reference" href="#id4" id="id1">[1]</a>.</dd>
+the algorithm described by Dikla Dotan-Cohen, <em>et al.</em> <a class="footnote-reference" href="#id5" id="id1">[1]</a>.</dd>
 <dt>cbpn</dt>
 <dd>Determines whether, under a particular comparison of conditions,
 connections between processes are perturbed; an implementation of the
-algorithm described by Christopher Lasher, <em>et al.</em> <a class="footnote-reference" href="#id5" id="id2">[2]</a>.</dd>
+algorithm described by Christopher Lasher, <em>et al.</em> <a class="footnote-reference" href="#id6" id="id2">[2]</a>.</dd>
 <dt>mcmcbpn</dt>
 <dd>Similar to cbpn, but attempts to discover the smallest set of
 connections which describes as much of the perturbation of interacting
@@ -326,36 +326,76 @@ genes as possible.</dd>
 </dl>
 <div class="section" id="installation">
 <h1>Installation</h1>
-<p>BPN requires the following external Python Packages, all available from
-the <a class="reference external" href="http://pypi.python.org/">Python Package Index</a>:</p>
+<p>The recommended way to install BPN is through the Python package
+installer <a class="reference external" href="http://pypi.python.org/pypi/pip">pip</a>, as it helps automagically manage dependencies. However,
+this document also provides instructions for manual installation.</p>
+<div class="section" id="dependencies">
+<h2>Dependencies</h2>
+<p>BPN depends on the following Python versions and external Python
+Packages (all available from the <a class="reference external" href="http://pypi.python.org/">Python Package Index</a>):</p>
 <ul class="simple">
-<li>Python v2.6 or v2.7 (Python 3 support not currently offered)</li>
+<li>Python <strong>2.6</strong> or <strong>2.7</strong>. Python 3 is not currently supported;
+Python 2.5 and lower are unsupported. Check your Python version with
+<tt class="docutils literal">python <span class="pre">--version</span></tt>. Obtain newer releases of Python from
+<a class="reference external" href="http://python.org/download/">http://python.org/download/</a></li>
 <li><a class="reference external" href="http://pypi.python.org/pypi/ConflictsOptionParser/">ConflictsOptionParser</a></li>
 <li><a class="reference external" href="http://pypi.python.org/pypi/ConvUtils/">ConvUtils</a></li>
 <li><a class="reference external" href="http://pypi.python.org/pypi/fisher/">fisher</a></li>
 <li><a class="reference external" href="http://networkx.lanl.gov/">NetworkX</a> (v.1.0 or greater)</li>
 <li><a class="reference external" href="http://scipy.org/">SciPy</a> (which depends on <a class="reference external" href="http://numpy.scipy.org/">NumPy</a>)</li>
 </ul>
-<p>The recommended way to install BPN is through the Python package
-installer <a class="reference external" href="http://pypi.python.org/pypi/pip">pip</a>, however, we also describe manual installation below.</p>
+<p>If you are installing BPN via pip, you only need to ensure that you have
+an appropriate version of Python installed on your system. If you are
+manually installing BPN, you will need to obtain and install all
+dependencies through your own means (e.g., via <tt class="docutils literal">apt</tt>, <tt class="docutils literal">yum</tt>, <tt class="docutils literal">.dmg</tt>
+installs, or from source, following the package's instructions).</p>
+</div>
 <div class="section" id="installation-by-pip">
 <h2>Installation by pip</h2>
-<p>pip will download and install BPN, as well as any Python package
+<p><a class="reference external" href="http://pypi.python.org/pypi/pip">pip</a> will download and install BPN, as well as any Python package
 dependencies that are not yet installed on your system or which require
 upgrading. (<strong>NOTE:</strong> There is currently an exception for NumPy; see
-<a class="footnote-reference" href="#id6" id="id3">[3]</a>.)</p>
+<a class="footnote-reference" href="#id7" id="id3">[3]</a>.)</p>
+<p><strong>NOTE</strong>: If you obtained BPN source code (e.g., from a software
+repository or tarball), replace <tt class="docutils literal">BiologicalProcessNetworks</tt> in the
+instructions below to the path of your directory containing the source
+code. For example, if you downloaded the source to
+<tt class="docutils literal">$HOME/src/BiologicalProcessNetworks</tt>, run</p>
+<pre class="literal-block">
+pip install --user $HOME/src/BiologicalProcessNetworks/
+</pre>
+<p>instead of</p>
+<pre class="literal-block">
+pip install --user BiologicalProcessNetworks
+</pre>
 <div class="section" id="local-installation-for-non-privileged-users">
 <h3>Local installation for non-privileged users</h3>
 <p>If you do not have administrative, or do not wish to make a system-wide
 installation of BPN, you can still install BPN and all its dependencies
 using either a virtual enviroment or the user site-packages
 installation.</p>
+<div class="section" id="user-site-packages-installation">
+<h4>User site-packages installation</h4>
+<p>Users without admin privileges who desire a simple local installation
+may do so by running</p>
+<pre class="literal-block">
+pip install --user BiologicalProcessNetworks
+</pre>
+<p>If you have not installed NumPy before hand, you may encounter an error
+<a class="footnote-reference" href="#id7" id="id4">[3]</a>. In this case, try</p>
+<pre class="literal-block">
+pip install --user numpy
+pip install --user BiologicalProcessNetworks
+</pre>
+</div>
 <div class="section" id="virtual-environment-installation">
 <h4>Virtual environment installation</h4>
-<p>It highly recommended to install BPN within its own virtual Python
-environment using pip with <a class="reference external" href="http://pypi.python.org/pypi/virtualenv">virtualenv</a>. With the aid of
-<a class="reference external" href="http://www.doughellmann.com/projects/virtualenvwrapper/">virtualenvwrapper</a>, the following steps will lead to a clean
-installation of BPN:</p>
+<p>You may install BPN within its own virtual Python
+environment using pip with <a class="reference external" href="http://pypi.python.org/pypi/virtualenv">virtualenv</a>. This has a number of
+advantages including a controlled environment in which BPN is installed,
+run, and uninstalled, which will not pollute your system files.
+With the aid of <a class="reference external" href="http://www.doughellmann.com/projects/virtualenvwrapper/">virtualenvwrapper</a>, the following steps will lead to a
+clean installation of BPN:</p>
 <pre class="literal-block">
 mkvirtualenv --distribute bpn
 pip install -E bpn numpy  # if numpy not installed
@@ -366,14 +406,6 @@ programs, do</p>
 <pre class="literal-block">
 workon bpn
 bpln --help   # or appropriate command
-</pre>
-</div>
-<div class="section" id="user-site-packages-installation">
-<h4>User site-packages installation</h4>
-<p>Users who do not desire installation into a virtual environment may
-still install locally into the user site-packages diretory using</p>
-<pre class="literal-block">
-pip install --user BiologicalProcessNetworks
 </pre>
 </div>
 </div>
@@ -399,24 +431,24 @@ install into the user-specific site-packages location with</p>
 <pre class="literal-block">
 python setup.py install --user
 </pre>
-<table class="docutils footnote" frame="void" id="id4" rules="none">
+<table class="docutils footnote" frame="void" id="id5" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
 <tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td><a class="reference external" href="http://dx.doi.org/10.1371/journal.pone.0005313">Dotan-Cohen, D., *et al.* &quot;Biological Process Linkage Networks.&quot;
 PLoS One. 2009.</a></td></tr>
 </tbody>
 </table>
-<table class="docutils footnote" frame="void" id="id5" rules="none">
+<table class="docutils footnote" frame="void" id="id6" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
 <tr><td class="label"><a class="fn-backref" href="#id2">[2]</a></td><td><a class="reference external" href="http://dx.doi.org/10.1371/journal.pone.0015247">Lasher, C., *et al.* &quot;Discovering Networks of Perturbed
 Biological Processes in Hepatocyte Cultures.&quot; PLoS One. 2010.</a></td></tr>
 </tbody>
 </table>
-<table class="docutils footnote" frame="void" id="id6" rules="none">
+<table class="docutils footnote" frame="void" id="id7" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id3">[3]</a></td><td>There is currently a bug in which pip attempts to install <a class="reference external" href="http://scipy.org/">SciPy</a>
+<tr><td class="label">[3]</td><td><em>(<a class="fn-backref" href="#id3">1</a>, <a class="fn-backref" href="#id4">2</a>)</em> There is currently a bug in which pip attempts to install <a class="reference external" href="http://scipy.org/">SciPy</a>
 before <a class="reference external" href="http://numpy.scipy.org/">NumPy</a>. If your install fails during the installation of
 SciPy, try running <tt class="docutils literal">pip install numpy</tt> (or local-install
 equivalent) prior to installing BPN.</td></tr>

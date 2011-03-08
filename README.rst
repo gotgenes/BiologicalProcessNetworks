@@ -27,10 +27,21 @@ mcmcbpn
 Installation
 ------------
 
-BPN requires the following external Python Packages, all available from
-the `Python Package Index`_:
+The recommended way to install BPN is through the Python package
+installer pip_, as it helps automagically manage dependencies. However,
+this document also provides instructions for manual installation.
 
-- Python v2.6 or v2.7 (Python 3 support not currently offered)
+
+Dependencies
+============
+
+BPN depends on the following Python versions and external Python
+Packages (all available from the `Python Package Index`_):
+
+- Python **2.6** or **2.7**. Python 3 is not currently supported;
+  Python 2.5 and lower are unsupported. Check your Python version with
+  ``python --version``. Obtain newer releases of Python from
+  http://python.org/download/
 - ConflictsOptionParser_
 - ConvUtils_
 - fisher_
@@ -38,17 +49,36 @@ the `Python Package Index`_:
 - SciPy_ (which depends on NumPy_)
 
 
-The recommended way to install BPN is through the Python package
-installer pip_, however, we also describe manual installation below.
+If you are installing BPN via pip, you only need to ensure that you have
+an appropriate version of Python installed on your system. If you are
+manually installing BPN, you will need to obtain and install all
+dependencies through your own means (e.g., via ``apt``, ``yum``, ``.dmg``
+installs, or from source, following the package's instructions).
 
 
 Installation by pip
 ===================
 
-pip will download and install BPN, as well as any Python package
+pip_ will download and install BPN, as well as any Python package
 dependencies that are not yet installed on your system or which require
 upgrading. (**NOTE:** There is currently an exception for NumPy; see
 [3]_.)
+
+**NOTE**: If you obtained BPN source code (e.g., from a software
+repository or tarball), replace ``BiologicalProcessNetworks`` in the
+instructions below to the path of your directory containing the source
+code. For example, if you downloaded the source to
+``$HOME/src/BiologicalProcessNetworks``, run
+
+::
+
+  pip install --user $HOME/src/BiologicalProcessNetworks/
+
+instead of
+
+::
+
+  pip install --user BiologicalProcessNetworks
 
 
 Local installation for non-privileged users
@@ -59,14 +89,34 @@ installation of BPN, you can still install BPN and all its dependencies
 using either a virtual enviroment or the user site-packages
 installation.
 
+User site-packages installation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Users without admin privileges who desire a simple local installation
+may do so by running
+
+::
+
+  pip install --user BiologicalProcessNetworks
+
+If you have not installed NumPy before hand, you may encounter an error
+[3]_. In this case, try
+
+::
+
+  pip install --user numpy
+  pip install --user BiologicalProcessNetworks
+
 
 Virtual environment installation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-It highly recommended to install BPN within its own virtual Python
-environment using pip with `virtualenv`_. With the aid of
-`virtualenvwrapper`_, the following steps will lead to a clean
-installation of BPN:
+You may install BPN within its own virtual Python
+environment using pip with `virtualenv`_. This has a number of
+advantages including a controlled environment in which BPN is installed,
+run, and uninstalled, which will not pollute your system files.
+With the aid of `virtualenvwrapper`_, the following steps will lead to a
+clean installation of BPN:
 
 ::
 
@@ -81,17 +131,6 @@ programs, do
 
   workon bpn
   bpln --help   # or appropriate command
-
-
-User site-packages installation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Users who do not desire installation into a virtual environment may
-still install locally into the user site-packages diretory using
-
-::
-
-  pip install --user BiologicalProcessNetworks
 
 
 System-wide installation for users with administrative access
