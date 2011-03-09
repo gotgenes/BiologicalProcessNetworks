@@ -34,7 +34,7 @@ class InteractionGraph(networkx.Graph):
         Returns a `set` of genes.
 
         :Parameters:
-        - `interaction_graph`: graph containing the gene-gene or gene
+        - `interactions_graph`: graph containing the gene-gene or gene
           product-gene product interactions
         - `annotated_genes`: a set of genes annotated with a term of
           interest whose neighbors to find
@@ -51,7 +51,7 @@ class InteractionGraph(networkx.Graph):
         """Remove genes lacking annotations from the graph.
 
         :Parameters:
-        - `interaction_graph`: graph containing the gene-gene or gene
+        - `interactions_graph`: graph containing the gene-gene or gene
           product-gene product interactions
         - `annotations_dict`: a dictionary with annotation terms as keys and
           `set`s of genes as values
@@ -94,7 +94,7 @@ class InteractionGraph(networkx.Graph):
             del annotations_dict[annotation]
 
 
-    def apply_expression_values_to_interaction_graph(self,
+    def apply_expression_values_to_interactions_graph(self,
             expression_values):
         """Apply expression values to the interaction graph as node
         weights.
@@ -283,7 +283,7 @@ class BplnInputData(object):
     """Structure storing all necessary input for BPLN."""
     def __init__(
             self,
-            interaction_graph,
+            interactions_graph,
             annotations_dict,
             annotations_stats,
             links,
@@ -294,7 +294,7 @@ class BplnInputData(object):
         """Create a new instance.
 
         :Parameters:
-        - `interaction_graph`: graph containing the gene-gene or gene
+        - `interactions_graph`: graph containing the gene-gene or gene
           product-gene product interactions
         - `annotations_dict`: a dictionary with annotation terms as keys
           and `set`s of genes as values
@@ -305,7 +305,7 @@ class BplnInputData(object):
         - `links_outfile`: file for output of link results
 
         """
-        self.interaction_graph = interaction_graph
+        self.interactions_graph = interactions_graph
         self.annotations_dict = annotations_dict
         self.annotations_stats = annotations_stats
         self.links = links
@@ -317,7 +317,7 @@ class ContextualInputData(BplnInputData):
     """Structure storing all necessary input for Contextual BPLN."""
     def __init__(
             self,
-            interaction_graph,
+            interactions_graph,
             annotations_dict,
             annotations_stats,
             links,
@@ -332,7 +332,7 @@ class ContextualInputData(BplnInputData):
         """Create a new instance.
 
         :Parameters:
-        - `interaction_graph`: graph containing the gene-gene or gene
+        - `interactions_graph`: graph containing the gene-gene or gene
           product-gene product interactions
         - `annotations_dict`: a dictionary with annotation terms as keys
           and `set`s of genes as values
@@ -344,7 +344,7 @@ class ContextualInputData(BplnInputData):
 
         """
         super(ContextualInputData, self).__init__(
-            interaction_graph=interaction_graph,
+            interactions_graph=interactions_graph,
             annotations_dict=annotations_dict,
             annotations_stats=annotations_stats,
             links=links,
@@ -361,7 +361,7 @@ class ContextualInputData(BplnInputData):
 class McmcInputData(BplnInputData):
     def __init__(
             self,
-            interaction_graph,
+            interactions_graph,
             annotations_dict,
             annotations_stats,
             burn_in,
@@ -379,7 +379,7 @@ class McmcInputData(BplnInputData):
         """Create a new instance.
 
         :Parameters:
-        - `interaction_graph`: graph containing the gene-gene or gene
+        - `interactions_graph`: graph containing the gene-gene or gene
           product-gene product interactions
         - `annotations_dict`: a dictionary with annotation terms as keys
           and `set`s of genes as values
@@ -405,7 +405,7 @@ class McmcInputData(BplnInputData):
 
         """
         super(McmcInputData, self).__init__(
-            interaction_graph=interaction_graph,
+            interactions_graph=interactions_graph,
             annotations_dict=annotations_dict,
             annotations_stats=annotations_stats,
             links=None,
@@ -443,14 +443,14 @@ class AnnotatedInteractionsGraph(object):
     """
     def __init__(
             self,
-            interaction_graph,
+            interactions_graph,
             annotations_dict,
             links_of_interest=None
         ):
         """Create a new instance.
 
         :Parameters:
-        - `interaction_graph`: graph containing the gene-gene or gene
+        - `interactions_graph`: graph containing the gene-gene or gene
           product-gene product interactions
         - `annotations_dict`: a dictionary with annotation terms as keys
           and `set`s of genes as values
@@ -462,7 +462,7 @@ class AnnotatedInteractionsGraph(object):
           'term1')`!]
 
         """
-        self._interaction_graph = interaction_graph
+        self._interactions_graph = interactions_graph
         self._annotations_dict = annotations_dict
         # We'll use the following variable to cache the number of
         # interactions present, since this is apparently not cached by
@@ -506,7 +506,7 @@ class AnnotatedInteractionsGraph(object):
         self._intraterm_interactions = collections.defaultdict(set)
         total_num_interactions = self.calc_num_interactions()
         broadcast_percent_complete = 0
-        for i, edge in enumerate(self._interaction_graph.edges_iter()):
+        for i, edge in enumerate(self._interactions_graph.edges_iter()):
             gene1_annotations = self._annotations_dict.get_item_keys(
                     edge[0])
             gene2_annotations = self._annotations_dict.get_item_keys(
@@ -570,7 +570,7 @@ class AnnotatedInteractionsGraph(object):
         """Returns the total number of interactions."""
         if self._num_interactions is None:
             self._num_interactions = \
-                    self._interaction_graph.number_of_edges()
+                    self._interactions_graph.number_of_edges()
         return self._num_interactions
 
 
@@ -619,9 +619,9 @@ class AnnotatedInteractionsGraph(object):
 
         """
         active_interactions = set()
-        for edge in self._interaction_graph.edges_iter():
-            gene1_expr = self._interaction_graph.node[edge[0]]['weight']
-            gene2_expr = self._interaction_graph.node[edge[1]]['weight']
+        for edge in self._interactions_graph.edges_iter():
+            gene1_expr = self._interactions_graph.node[edge[0]]['weight']
+            gene2_expr = self._interactions_graph.node[edge[1]]['weight']
             if greater:
                 if gene1_expr >= cutoff and gene2_expr >= cutoff:
                     active_interactions.add(edge)
@@ -634,21 +634,21 @@ class AnnotatedInteractionsGraph(object):
 class ShoveAnnotatedInteractionsGraph(AnnotatedInteractionsGraph):
     def __init__(
             self,
-            interaction_graph,
+            interactions_graph,
             annotations_dict,
             store
         ):
         """Create a new instance.
 
         :Parameters:
-        - `interaction_graph`: graph containing the gene-gene or gene
+        - `interactions_graph`: graph containing the gene-gene or gene
           product-gene product interactions
         - `annotations_dict`: a dictionary with annotation terms as keys and
           `set`s of genes as values
         - `store`: a `Shove` instance
 
         """
-        self._interaction_graph = interaction_graph
+        self._interactions_graph = interactions_graph
         self._annotations_dict = annotations_dict
         self._store = store
         self._annotations_to_interactions = store
@@ -659,7 +659,7 @@ class ShoveAnnotatedInteractionsGraph(AnnotatedInteractionsGraph):
         of interactions
 
         """
-        for interaction in self._interaction_graph.edges_iter():
+        for interaction in self._interactions_graph.edges_iter():
             gene1_annotations = self._annotations_dict[interaction[0]]
             gene2_annotations = self._annotations_dict[interaction[1]]
             annotation_pairs = itertools.product(gene1_annotations,

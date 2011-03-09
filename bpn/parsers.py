@@ -54,18 +54,18 @@ def parse_interactions_file_to_graph(interactions_fileh):
       line
 
     """
-    interaction_graph = structures.EdgeSwapGraph()
+    interactions_graph = structures.EdgeSwapGraph()
     csv_reader = convutils.make_csv_reader(interactions_fileh)
     for entry in csv_reader:
         node1 = entry['interactor1']
         node2 = entry['interactor2']
         if 'weight' in entry:
             weight = float(entry['weight'])
-            interaction_graph.add_edge(node1, node2, weight=weight)
+            interactions_graph.add_edge(node1, node2, weight=weight)
         else:
-            interaction_graph.add_edge(node1, node2, weight=1)
+            interactions_graph.add_edge(node1, node2, weight=1)
 
-    return interaction_graph
+    return interactions_graph
 
 
 def parse_annotations_to_dict(annotations_fileh):

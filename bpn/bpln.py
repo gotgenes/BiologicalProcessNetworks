@@ -45,7 +45,7 @@ logger = logging.getLogger('bpn.bpln')
 
 
 def calculate_linkage_scores(
-        interaction_graph,
+        interactions_graph,
         annotations_dict,
         annotation_pairs
     ):
@@ -67,12 +67,12 @@ def calculate_linkage_scores(
     values, one result at a time, until it has completed all
     calculations.
 
-    NOTE: The number of genes (or products) in `interaction_graph`
+    NOTE: The number of genes (or products) in `interactions_graph`
     must equal the number in the union of all sets from
     `annotations_dict`, or the calculations will be incorrect.
 
     :Parameters:
-    - `interaction_graph`: graph containing the gene-gene or gene
+    - `interactions_graph`: graph containing the gene-gene or gene
       product-gene product interactions
     - `annotations_dict`: a dictionary with annotation terms as keys and
       `set`s of genes as values
@@ -89,8 +89,8 @@ def calculate_linkage_scores(
     # that may be "picked" to be part of a set.
     # NOTE: This had better be the same as that of the union of all the
     # gene sets in the annotations_dict. This is fastest to just check
-    # the interaction_graph
-    universe_size = len(interaction_graph)
+    # the interactions_graph
+    universe_size = len(interactions_graph)
 
     # We're going to keep around some variables as cache, to avoid
     # recomputing where we can.
@@ -105,7 +105,7 @@ def calculate_linkage_scores(
         # annotation_i's neigborhood.
         if annotation_i != prev_annotation_i:
             annotated_i_genes = annotations_dict[annotation_i]
-            neighbors = interaction_graph.get_neighbors_of_annotated(
+            neighbors = interactions_graph.get_neighbors_of_annotated(
                     annotated_i_genes)
 
         annotated_j_genes = annotations_dict[annotation_j]
@@ -131,7 +131,7 @@ def calculate_linkage_scores(
 
 
 def calculate_and_output_scores(
-        interaction_graph,
+        interactions_graph,
         annotations_dict,
         links,
         num_links,
@@ -140,7 +140,7 @@ def calculate_and_output_scores(
     """Calculate and output the link scores.
 
     :Parameters:
-    - `interaction_graph`: graph containing the gene-gene or gene
+    - `interactions_graph`: graph containing the gene-gene or gene
       product-gene product interactions
     - `annotations_dict`: a dictionary with annotation terms as keys and
       `set`s of genes as values
@@ -156,7 +156,7 @@ def calculate_and_output_scores(
 
     for i, link_scores in enumerate(
             calculate_linkage_scores(
-                interaction_graph,
+                interactions_graph,
                 annotations_dict,
                 links
             )
@@ -191,7 +191,7 @@ def main(argv=None):
 
     # Create the output CSV file
     calculate_and_output_scores(
-        input_data.interaction_graph,
+        input_data.interactions_graph,
         input_data.annotations_dict,
         input_data.links,
         input_data.num_links,

@@ -52,7 +52,7 @@ def main(argv=None):
     logger.info("Constructing supporting data structures; this may "
             "take a while...")
     annotated_interactions = bpn.structures.AnnotatedInteractionsArray(
-            input_data.interaction_graph,
+            input_data.interactions_graph,
             input_data.annotations_dict
     )
     logger.info("Considering %d candidate links in total." %

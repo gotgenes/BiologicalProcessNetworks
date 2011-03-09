@@ -79,7 +79,7 @@ def translate_gene_ids(
     return translated_ids
 
 
-def _calculate_mean_expression_value(interaction_graph):
+def _calculate_mean_expression_value(interactions_graph):
     """Calculates the mean expression value for the genes in the graph.
 
     Assumes the expression values are log10-transformed.
@@ -87,19 +87,19 @@ def _calculate_mean_expression_value(interaction_graph):
     Returns the mean expression value.
 
     :Parameters:
-    - `interaction_graph`: graph containing the gene-gene or gene
+    - `interactions_graph`: graph containing the gene-gene or gene
       product-gene product interactions
 
     """
     weights = [value['weight'] for value in
-            interaction_graph.node.itervalues()]
+            interactions_graph.node.itervalues()]
     mean_expression_value = sum(weights) / len(weights)
     return mean_expression_value
 
 
 def calculate_node_z_prime(
         node,
-        interaction_graph,
+        interactions_graph,
         selected_nodes,
         score_correction=False,
         mean_expression_value=None
@@ -123,7 +123,7 @@ def calculate_node_z_prime(
 
     :Parameters:
     - `node`: the node for which to compute the z-prime score
-    - `interaction_graph`: graph containing the gene-gene or gene
+    - `interactions_graph`: graph containing the gene-gene or gene
       product-gene product interactions
     - `selected_nodes`: a `set` of nodes fitting some criterion of
       interest (e.g., annotated with a term of interest)
@@ -139,18 +139,18 @@ def calculate_node_z_prime(
         raise ValueError("mean_expression_value may not be none if "
                 "score correction is desired.")
 
-    node_neighbors = interaction_graph[node]
-    interaction_graph_nodes = interaction_graph.node
+    node_neighbors = interactions_graph[node]
+    interactions_graph_nodes = interactions_graph.node
     #neighbor_z_scores = [
-            #interaction_graph[node][neighbor]['weight'] *
-            #interaction_graph_nodes[neighbor]['weight'] for
+            #interactions_graph[node][neighbor]['weight'] *
+            #interactions_graph_nodes[neighbor]['weight'] for
             #neighbor in node_neighbors if neighbor in selected_nodes
     #]
     neighbor_z_scores = []
     for neighbor in node_neighbors:
         if neighbor in selected_nodes:
-            edge_weight = interaction_graph[node][neighbor]['weight']
-            neighbor_expr = interaction_graph_nodes[neighbor]['weight']
+            edge_weight = interactions_graph[node][neighbor]['weight']
+            neighbor_expr = interactions_graph_nodes[neighbor]['weight']
             contribution = edge_weight * neighbor_expr
             neighbor_z_scores.append(contribution)
     try:
@@ -164,12 +164,12 @@ def calculate_node_z_prime(
         else:
             raise e
 
-    z_prime = interaction_graph_nodes[node]['weight'] * max_z_score
+    z_prime = interactions_graph_nodes[node]['weight'] * max_z_score
 
     if score_correction:
         logger.debug("Correcting z_prime.")
         edge_weights = [
-                interaction_graph[node][neighbor]['weight'] for
+                interactions_graph[node][neighbor]['weight'] for
                 neighbor in node_neighbors if neighbor in selected_nodes
         ]
         try:
@@ -188,7 +188,7 @@ def calculate_node_z_prime(
 
 
 def calculate_overlap_z_score(
-        interaction_graph,
+        interactions_graph,
         annotated_i_genes,
         neighbors_of_i,
         annotated_j_genes,
@@ -207,7 +207,7 @@ def calculate_overlap_z_score(
     - are not annotated with term i
 
     :Parameters:
-    - `interaction_graph`: graph containing the gene-gene or gene
+    - `interactions_graph`: graph containing the gene-gene or gene
       product-gene product interactions
     - `annotated_i_genes`: the set of genes annotated with term i
     - `neighbors_of_i`: nodes neighboring those annotated with term i
@@ -229,7 +229,7 @@ def calculate_overlap_z_score(
     for neighbor in neighbors_annotated_with_j:
         node_z_prime = calculate_node_z_prime(
                 neighbor,
-                interaction_graph,
+                interactions_graph,
                 annotated_i_genes,
                 score_correction,
                 mean_expression_value
@@ -275,7 +275,7 @@ def estimate_p_value(num_exceedances, num_permutations):
 
 
 def compute_linked_significance(
-        interaction_graph,
+        interactions_graph,
         annotations_dict,
         annotation_term_i,
         annotation_term_j,
@@ -307,7 +307,7 @@ def compute_linked_significance(
     Bioinformatics 25, i161-168 (2009).
 
     :Parameters:
-    - `interaction_graph`: graph containing the gene-gene or gene
+    - `interactions_graph`: graph containing the gene-gene or gene
       product-gene product interactions
     - `annotations_dict`: a dictionary with annotation terms as keys and
       `set`s of genes as values
@@ -335,18 +335,18 @@ def compute_linked_significance(
     # and get its index in a list. At this index will be the new ID to
     # consider as the node label and the ID of the gene within annotated
     # sets.
-    genes_list = interaction_graph.nodes()
+    genes_list = interactions_graph.nodes()
     genes_list_index_dict = dict([(k, v) for (v, k) in
         enumerate(genes_list)])
 
     annotated_i_genes = annotations_dict[annotation_term_i]
     # Get neighbors of genes annotated with term i that are not
     # annotated with term i themselves
-    neighbors_of_i = interaction_graph.get_neighbors_of_annotated(
+    neighbors_of_i = interactions_graph.get_neighbors_of_annotated(
                 annotated_i_genes)
     # Find the overlap z-score for the data as it was observed.
     observed_overlap_z_score = calculate_overlap_z_score(
-            interaction_graph,
+            interactions_graph,
             annotated_i_genes,
             neighbors_of_i,
             annotations_dict[annotation_term_j],
@@ -387,7 +387,7 @@ def compute_linked_significance(
         ))
         # Compute the new score for the shuffled genes
         randomized_overlap_z_score = calculate_overlap_z_score(
-                interaction_graph,
+                interactions_graph,
                 annotated_i_genes,
                 neighbors_of_i,
                 shuffled_annotated_j_genes,
@@ -409,7 +409,7 @@ def compute_linked_significance(
 
 
 def compute_link_statistics(
-        interaction_graph,
+        interactions_graph,
         annotations_dict,
         annotation_term_i,
         annotation_term_j
@@ -438,7 +438,7 @@ def compute_link_statistics(
       annotated by the first term and genes annotated by the second term
 
     :Parameters:
-    - `interaction_graph`: graph containing the gene-gene or gene
+    - `interactions_graph`: graph containing the gene-gene or gene
       product-gene product interactions
     - `annotations_dict`: a dictionary with annotation terms as keys and
       `set`s of genes as values
@@ -450,7 +450,7 @@ def compute_link_statistics(
     annotated_i_genes = annotations_dict[annotation_term_i]
     # Get neighbors of genes annotated with term i that are not
     # annotated with term i themselves
-    neighbors_of_i = interaction_graph.get_neighbors_of_annotated(
+    neighbors_of_i = interactions_graph.get_neighbors_of_annotated(
                 annotated_i_genes)
     annotated_j_genes = annotations_dict[annotation_term_j]
     intersection_size = len(neighbors_of_i.intersection(
@@ -471,7 +471,7 @@ def compute_link_statistics(
 
 def compute_significance_for_pairs(
         pairs,
-        interaction_graph,
+        interactions_graph,
         annotations_dict,
         num_permutations,
         use_estimation=True,
@@ -491,7 +491,7 @@ def compute_significance_for_pairs(
 
     :Parameters:
     - `pairs`: an iterable of pairs of annotation terms
-    - `interaction_graph`: graph containing the gene-gene or gene
+    - `interactions_graph`: graph containing the gene-gene or gene
       product-gene product interactions
     - `annotations_dict`: a dictionary with annotation terms as keys and
       `set`s of genes as values
@@ -508,7 +508,7 @@ def compute_significance_for_pairs(
     """
     if score_correction:
         mean_expression_value = _calculate_mean_expression_value(
-                interaction_graph)
+                interactions_graph)
     else:
         mean_expression_value = None
     for annotation_term_i, annotation_term_j in pairs:
@@ -516,7 +516,7 @@ def compute_significance_for_pairs(
                 annotation_term_i, annotation_term_j))
         observed_score, num_exceedances, linked_p_value = \
                 compute_linked_significance(
-                        interaction_graph,
+                        interactions_graph,
                         annotations_dict,
                         annotation_term_i,
                         annotation_term_j,
@@ -526,7 +526,7 @@ def compute_significance_for_pairs(
                         mean_expression_value
         )
         link_statistics = compute_link_statistics(
-                interaction_graph,
+                interactions_graph,
                 annotations_dict,
                 annotation_term_i,
                 annotation_term_j
@@ -539,7 +539,7 @@ def compute_significance_for_pairs(
 
 def compute_significance_for_pairs_edge_swap(
         pairs,
-        interaction_graph,
+        interactions_graph,
         annotations_dict,
         num_permutations,
         num_edge_swap_events,
@@ -574,7 +574,7 @@ def compute_significance_for_pairs_edge_swap(
 
     :Parameters:
     - `pairs`: an iterable of pairs of annotation terms
-    - `interaction_graph`: graph containing the gene-gene or gene
+    - `interactions_graph`: graph containing the gene-gene or gene
       product-gene product interactions
     - `annotations_dict`: a dictionary with annotation terms as keys and
       `set`s of genes as values
@@ -582,7 +582,7 @@ def compute_significance_for_pairs_edge_swap(
       [NOTE: see `use_estimation`]
     - `num_edge_swap_events`: the number of edge swap events desired to
       produce each random graph. [NOTE: this number is multiplied by the
-      number of edges in the `interaction_graph` to get the total number
+      number of edges in the `interactions_graph` to get the total number
       of edge swap events.]
     - `use_estimation`: estimate significances for pairs which are
       unlikely to have significant scores [default: `True`] [NOTE: using
@@ -607,7 +607,7 @@ def compute_significance_for_pairs_edge_swap(
 
     if score_correction:
         mean_expression_value = _calculate_mean_expression_value(
-                interaction_graph)
+                interactions_graph)
     else:
         mean_expression_value = None
 
@@ -619,11 +619,11 @@ def compute_significance_for_pairs_edge_swap(
         annotated_i_genes = annotations_dict[annotation_term_i]
         # Get neighbors of genes annotated with term i that are not
         # annotated with term i themselves
-        neighbors_of_i = interaction_graph.get_neighbors_of_annotated(
+        neighbors_of_i = interactions_graph.get_neighbors_of_annotated(
                     annotated_i_genes)
         # Find the overlap z-score for the data as it was observed.
         observed_overlap_z_score = calculate_overlap_z_score(
-                interaction_graph,
+                interactions_graph,
                 annotated_i_genes,
                 neighbors_of_i,
                 annotations_dict[annotation_term_j],
@@ -632,7 +632,7 @@ def compute_significance_for_pairs_edge_swap(
         )
 
         link_statistics = compute_link_statistics(
-                interaction_graph,
+                interactions_graph,
                 annotations_dict,
                 annotation_term_i,
                 annotation_term_j
@@ -647,7 +647,7 @@ def compute_significance_for_pairs_edge_swap(
     # Use this variable to track our progress.
     previous_percent_done = 0
     for i in xrange(num_permutations):
-        randomized_edges_graph = interaction_graph.randomize_by_edge_swaps(
+        randomized_edges_graph = interactions_graph.randomize_by_edge_swaps(
                 num_edge_swap_events)
         for pair in pairs:
             annotation_term_i, annotation_term_j = pair
@@ -751,7 +751,7 @@ def calculate_and_output_results_resampling(
         outfileh,
         pairs,
         total_pairs,
-        interaction_graph,
+        interactions_graph,
         annotations_dict,
         num_permutations,
         use_estimation=True,
@@ -766,7 +766,7 @@ def calculate_and_output_results_resampling(
     - `pairs`: an iterable of pairs of annotation terms
     - `total_pairs`: the number of total annotation pairs to be
       processed
-    - `interaction_graph`: graph containing the gene-gene or gene
+    - `interactions_graph`: graph containing the gene-gene or gene
       product-gene product interactions
     - `annotations_dict`: a dictionary with annotation terms as keys and
       `set`s of genes as values
@@ -786,7 +786,7 @@ def calculate_and_output_results_resampling(
     # Set up the test results iterator.
     significance_results = compute_significance_for_pairs(
             pairs,
-            interaction_graph,
+            interactions_graph,
             annotations_dict,
             num_permutations,
             use_estimation,
@@ -823,7 +823,7 @@ def calculate_and_output_results_edge_swap(
         outfileh,
         pairs,
         total_pairs,
-        interaction_graph,
+        interactions_graph,
         annotations_dict,
         num_permutations,
         num_edge_swap_events,
@@ -839,7 +839,7 @@ def calculate_and_output_results_edge_swap(
     - `pairs`: an iterable of pairs of annotation terms
     - `total_pairs`: the number of total annotation pairs to be
       processed
-    - `interaction_graph`: graph containing the gene-gene or gene
+    - `interactions_graph`: graph containing the gene-gene or gene
       product-gene product interactions
     - `annotations_dict`: a dictionary with annotation terms as keys and
       `set`s of genes as values
@@ -847,7 +847,7 @@ def calculate_and_output_results_edge_swap(
       [NOTE: see `use_estimation`]
     - `num_edge_swap_events`: the number of edge swap events desired to
       produce each random graph. [NOTE: this number is multiplied by the
-      number of edges in the `interaction_graph` to get the total number
+      number of edges in the `interactions_graph` to get the total number
       of edge swap events.]
     - `use_estimation`: estimate significances for pairs which are
       unlikely to have significant scores [default: `True`] [NOTE: using
@@ -862,7 +862,7 @@ def calculate_and_output_results_edge_swap(
     csv_writer = convutils.make_csv_dict_writer(outfileh, OUTFILE_FIELDS)
     pair_statistics = compute_significance_for_pairs_edge_swap(
             pairs,
-            interaction_graph,
+            interactions_graph,
             annotations_dict,
             num_permutations,
             num_edge_swap_events,
@@ -892,7 +892,7 @@ def main(argv=None):
                 input_data.links_outfile,
                 input_data.links,
                 input_data.num_links,
-                input_data.interaction_graph,
+                input_data.interactions_graph,
                 input_data.annotations_dict,
                 input_data.num_permutations,
                 input_data.edge_swaps,
@@ -905,7 +905,7 @@ def main(argv=None):
                 input_data.links_outfile,
                 input_data.links,
                 input_data.num_links,
-                input_data.interaction_graph,
+                input_data.interactions_graph,
                 input_data.annotations_dict,
                 input_data.num_permutations,
                 input_data.estimate,

@@ -448,13 +448,13 @@ class BplnCli(object):
         # Create interaction graph
         logger.info("Parsing interactions from {0}.".format(
                 interactions_file.name))
-        self.interaction_graph = \
+        self.interactions_graph = \
                 parsers.parse_interactions_file_to_graph(
                         interactions_file)
         logger.info("{0} genes (products) with {1} interactions "
                 "parsed.".format(
-                    len(self.interaction_graph),
-                    self.interaction_graph.number_of_edges()
+                    len(self.interactions_graph),
+                    self.interactions_graph.number_of_edges()
                 )
         )
 
@@ -482,19 +482,19 @@ class BplnCli(object):
         # Remove from the graph the set of nodes that have no annotation.
         logger.info("Pruning unannotated genes (products) from "
                 "interaction graph.")
-        self.interaction_graph.prune_unannotated_genes(
+        self.interactions_graph.prune_unannotated_genes(
                 self.annotations_dict)
         logger.info("{0} genes (products) with {1} interactions "
                 "remaining in graph.".format(
-                    len(self.interaction_graph),
-                    self.interaction_graph.number_of_edges()
+                    len(self.interactions_graph),
+                    self.interactions_graph.number_of_edges()
                 )
         )
 
         # Remove from the annotations any genes which are not in the graph.
         logger.info("Removing genes with no interactions from the "
                 "sets of annotated genes.")
-        self.interaction_graph.prune_non_network_genes_from_annotations(
+        self.interactions_graph.prune_non_network_genes_from_annotations(
                 self.annotations_dict)
         self.annotations_stats = structures.get_annotations_stats(
                 self.annotations_dict)
@@ -507,11 +507,11 @@ class BplnCli(object):
         )
 
         # Sanity test: the number of genes (products) in the
-        # interaction_graph should equal the union of all the sets in
+        # interactions_graph should equal the union of all the sets in
         # annotations_dict
-        assert len(self.interaction_graph) == \
+        assert len(self.interactions_graph) == \
                 self.annotations_stats['num_genes'], \
-                "interaction_graph and annotations_dict have unequal " \
+                "interactions_graph and annotations_dict have unequal " \
                 "numbers of genes!"
 
         for term, genes in self.annotations_dict.iteritems():
@@ -528,7 +528,7 @@ class BplnCli(object):
 
     def _construct_data_struct(self):
         data = structures.BplnInputData(
-                interaction_graph=self.interaction_graph,
+                interactions_graph=self.interactions_graph,
                 annotations_dict=self.annotations_dict,
                 annotations_stats=self.annotations_stats,
                 links=self.links,
@@ -577,17 +577,17 @@ class ContextualCli(BplnCli):
         # any nodes lacking expression values from the graph.
         logger.info("Removing genes without expression values from "
                 "interaction graph and annotation sets.")
-        self.interaction_graph.apply_expression_values_to_interaction_graph(
+        self.interactions_graph.apply_expression_values_to_interactions_graph(
                 expression_values)
         # Re-synchronize the interaction graph and annotations dictionary.
-        self.interaction_graph.prune_non_network_genes_from_annotations(
+        self.interactions_graph.prune_non_network_genes_from_annotations(
                 self.annotations_dict)
         expression_file.close()
 
         self.annotations_stats = structures.get_annotations_stats(
                 self.annotations_dict)
         gene_stats = {
-                'num_interactions': self.interaction_graph.number_of_edges()
+                'num_interactions': self.interactions_graph.number_of_edges()
         }
         gene_stats.update(self.annotations_stats)
         logger.info("%(num_genes)d genes (products) with "
@@ -599,7 +599,7 @@ class ContextualCli(BplnCli):
 
     def _construct_data_struct(self):
         data = structures.ContextualInputData(
-                interaction_graph=self.interaction_graph,
+                interactions_graph=self.interactions_graph,
                 annotations_dict=self.annotations_dict,
                 annotations_stats=self.annotations_stats,
                 links=self.links,
@@ -642,7 +642,7 @@ class McmcCli(ContextualCli):
 
     def _construct_data_struct(self):
         data = structures.McmcInputData(
-                interaction_graph=self.interaction_graph,
+                interactions_graph=self.interactions_graph,
                 annotations_dict=self.annotations_dict,
                 annotations_stats=self.annotations_stats,
                 burn_in=self.opts.burn_in,
