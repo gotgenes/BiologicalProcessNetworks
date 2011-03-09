@@ -118,7 +118,8 @@ ARGUMENTS:
         need to manipulate the options and arguments before returning
         them.
         """
-        pass
+        if not self.opts.logfile:
+            self.opts.logfile = self.default_logfile_name
 
 
     def parse_args(self, argv=None):
@@ -338,10 +339,7 @@ class BplnCli(object):
 
     def _begin_logging(self):
         """Hook method to control setting up logging."""
-        if self.opts.logfile:
-            logconf.set_up_root_logger(self.opts.logfile)
-        else:
-            logfile_name = self.cli_parser.default_logfile_name
+        logconf.set_up_root_logger(self.opts.logfile)
 
 
     def parse_selected_links(self, selected_links_file_name):
