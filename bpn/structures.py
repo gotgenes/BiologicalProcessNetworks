@@ -464,6 +464,9 @@ class AnnotatedInteractionsGraph(object):
         """
         self._interactions_graph = interactions_graph
         self._annotations_dict = annotations_dict
+        # This will contain the names of of all the terms which
+        # annotate the genes.
+        self._annotation_terms = set()
         # We'll use the following variable to cache the number of
         # interactions present, since this is apparently not cached by
         # the NetworkX Graph class.
@@ -509,8 +512,10 @@ class AnnotatedInteractionsGraph(object):
         for i, edge in enumerate(self._interactions_graph.edges_iter()):
             gene1_annotations = self._annotations_dict.get_item_keys(
                     edge[0])
+            self._annotation_terms.update(gene1_annotations)
             gene2_annotations = self._annotations_dict.get_item_keys(
                     edge[1])
+            self._annotation_terms.update(gene2_annotations)
             pairwise_combinations = itertools.product(gene1_annotations,
                     gene2_annotations)
             for gene1_annotation, gene2_annotation in \
@@ -693,3 +698,46 @@ class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
 
     # TODO: Add support for intraterm interactions
 
+
+class IntratermInteractionsArray(AnnotatedInteractionsArray):
+    """Similar to `AnnotatedInteractionsArray`, but with support for
+    intraterm interactions.
+
+    Additional changes include the following:
+
+    - Annotation terms are stored in a list
+    - ``self._links`` becomes a list of tuples of integers, rather than
+      tuples of strings (the actual terms), meaning there's an
+      additional level of indirection to get the actual terms
+
+    """
+    def _post_process_structures(self):
+        super(IntratermInteractionsArray,
+                self)._post_process_structures()
+        # We need to convert self._links from a list of tuples of
+        # annotation terms to a list of tuples of integers, where each
+        # integer represents some annotation term.
+        #
+        # First, let's convert the annotation_terms attribute into a
+        # sorted list.
+        self._annotation_terms = sorted(self._annotation_terms)
+        # Now we create a temporary dictionary to map from annotation
+        # terms to their respective indices.
+        term_map = {}
+        for i, term in enumerate(self._annotation_terms):
+            term_map[term] = i
+        # Now we process self._links into tuples of integers instead of
+        # tuples of strings.
+        #
+        # We will take advantage of the fact that the annotation terms
+        # within the link tuples should be sorted in alphabetical order
+        # to guarantee that their corresponding integers will also be
+        # sorted such that the lower integer will appear first, and the
+        # higher second, in the resulting converted tuple.
+        for i, link in enumerate(self._links):
+            self._links[i] = (term_map[link[0]], term_map[link[1]])
+        # Now we must convert the intraterm interactions.
+        self._intraterm_interactions = [
+                self._intraterm_interactions[term] for term in
+                self._annotation_terms
+        ]
