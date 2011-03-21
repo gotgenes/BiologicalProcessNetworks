@@ -631,58 +631,6 @@ class AnnotatedInteractionsGraph(object):
         return active_interactions
 
 
-class ShoveAnnotatedInteractionsGraph(AnnotatedInteractionsGraph):
-    def __init__(
-            self,
-            interactions_graph,
-            annotations_dict,
-            store
-        ):
-        """Create a new instance.
-
-        :Parameters:
-        - `interactions_graph`: graph containing the gene-gene or gene
-          product-gene product interactions
-        - `annotations_dict`: a dictionary with annotation terms as keys and
-          `set`s of genes as values
-        - `store`: a `Shove` instance
-
-        """
-        self._interactions_graph = interactions_graph
-        self._annotations_dict = annotations_dict
-        self._store = store
-        self._annotations_to_interactions = store
-
-
-    def _create_interaction_annotations(self):
-        """Convert all the node annotations into pair-wise annotations
-        of interactions
-
-        """
-        for interaction in self._interactions_graph.edges_iter():
-            gene1_annotations = self._annotations_dict[interaction[0]]
-            gene2_annotations = self._annotations_dict[interaction[1]]
-            annotation_pairs = itertools.product(gene1_annotations,
-                    gene2_annotations)
-            for annotation1, annotation2 in annotation_pairs:
-                if annotation1 == annotation2:
-                    continue
-                if annotation1 > annotation2:
-                    # Swap the annotations so they are in alphabetical
-                    # order
-                    annotation1, annotation2 = annotation2, annotation1
-                # Get the interactions this pair of terms annotates
-                annotated_interactions = \
-                        self._annotations_to_interactions.get(
-                                (annotation1, annotation2), set())
-                # Add this interaction
-                annotated_interactions.add(interaction)
-                # Update the store
-                self._annotations_to_interactions[
-                        (annotation1, annotation2)] = \
-                                annotated_interactions
-
-
 class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
     """Similar to `AnnotatedInteractionsGraph`, however, it stores
     links, and their associated interactions, in linear arrays (lists),
