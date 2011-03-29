@@ -21,7 +21,7 @@ import numpy
 import logging
 logger = logging.getLogger('bpn.mcmcbpn.states')
 
-from mcmcbpn import SUPERDEBUG, SUPERDEBUG_MODE
+from defaults import SUPERDEBUG, SUPERDEBUG_MODE
 
 
 class ParameterNotInDistributionError(ValueError):
