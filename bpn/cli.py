@@ -305,6 +305,10 @@ class McmcArgParser(ExpressionBasedArgParser):
                 help=("disables swapping links as an option for "
                     "transitions")
         )
+        self.cli_parser.add_option('--terms-based', action='store_true',
+                help=("uses terms-based, rather than links-based model "
+                    "[implies ``--disable-swaps``]")
+        )
         self.cli_parser.add_option('--transition-ratio', type='float',
                 default=0.9,
                 help=("The target ratio of proposed link transitions "
@@ -650,6 +654,7 @@ class McmcCli(ContextualCli):
                 activity_threshold=self.opts.activity_threshold,
                 free_parameters=self.opts.free_parameters,
                 disable_swaps=self.opts.disable_swaps,
+                terms_based=self.opts.terms_based,
                 transition_ratio=self.opts.transition_ratio,
                 links_outfile=self.links_outfile,
                 transitions_outfile=self.transitions_outfile,

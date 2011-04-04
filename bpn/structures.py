@@ -370,6 +370,7 @@ class McmcInputData(BplnInputData):
             activity_threshold,
             free_parameters,
             disable_swaps,
+            terms_based,
             transition_ratio,
             links_outfile,
             parameters_outfile,
@@ -396,6 +397,8 @@ class McmcInputData(BplnInputData):
           adjoining values
         - `disable_swaps`: `True` if swap transitions are to be
           disabled, `False` otherwise.
+        - `terms_based`: `True` if terms-based model is to be used,
+          `False` otherwise
         - `transition_ratio`: a `float` indicating the ratio of link
           transitions to parameter transitions
         - `links_outfile`: file for output of link results
@@ -423,6 +426,7 @@ class McmcInputData(BplnInputData):
         self.activity_threshold = activity_threshold
         self.free_parameters = free_parameters
         self.disable_swaps = disable_swaps
+        self.terms_based = terms_based
         self.transition_ratio = transition_ratio
         self.parameters_outfile = parameters_outfile
         self.transitions_outfile = transitions_outfile
