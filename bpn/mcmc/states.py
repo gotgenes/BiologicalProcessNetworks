@@ -1539,7 +1539,7 @@ class PLNOverallState(State):
 
     def calc_log_prob_selected(self):
         """Calculates the log base 10 of the probability that the number
-        of terms selected would be as large as it is given the link
+        of links selected would be as large as it is given the link
         prior.
 
         """
@@ -1676,4 +1676,119 @@ class ArrayOverallState(PLNOverallState):
         # on which was used for the transition.
         self._delta = None
 
+
+class TermsBasedOverallState(ArrayOverallState):
+    """Similar to `ArrayOverallState`, but incorporating annotation
+    terms into the likelihood function.
+
+    """
+    def __init__(
+            self,
+            annotated_interactions,
+            active_gene_threshold,
+            transition_ratio,
+            selected_links_indices=None,
+            alpha=None,
+            beta=None,
+            link_prior=None,
+            term_prior=None,
+            parameters_state_class=TermPriorParametersState,
+            links_state_class=TermsAndLinksState
+        ):
+        """Create a new instance.
+
+        :Parameters:
+        - `annotated_interactions`: an `AnnotatedInteractionsArray`
+          instance
+        - `active_gene_threshold`: the threshold at or above which a
+          gene is considered "active"
+        - `transition_ratio`: a `float` indicating the ratio of link
+          transitions to parameter transitions
+        - `selected_links_indices`: a user-defined seed of indices to
+          links to start as selected
+        - `alpha`: the false-positive rate; see `PLNParametersState` for
+          more information
+        - `beta`: the false-negative rate; see `PLNParametersState` for
+          more information
+        - `link_prior`: the assumed probability we would select any one
+          link; see `PLNParametersState` for more information
+        - `term_prior`:the assumed probability we would select any one
+          term; see `RandomTransitionParametersState` for more
+          information
+        - `parameters_state_class`: the class of the parameters state to
+          use [default: `TermPriorParametersState`]
+        - `links_state_class`: the class of the links state to use
+          [default: `TermsAndLinksState`]
+
+        """
+        # Warning: Copy-and-pasted and modified from
+        # ArrayOverallState.__init__().
+        num_process_links = annotated_interactions.calc_num_links()
+        num_terms = annotated_interactions.calc_num_terms()
+
+        if selected_links_indices is None:
+            selected_links_indices = random.sample(
+                    annotated_interactions.get_all_links(),
+                    random.randrange(num_process_links)
+            )
+
+        # Next, figure out which interactions are active
+        logger.info("Determining active interactions.")
+        active_interactions = \
+                annotated_interactions.get_active_interactions(
+                        active_gene_threshold
+        )
+        self.links_state = links_state_class(
+                annotated_interactions,
+                selected_links_indices,
+                active_interactions
+        )
+        self.parameters_state = parameters_state_class(
+                num_process_links,
+                num_terms,
+                alpha=alpha,
+                beta=beta,
+                link_prior=link_prior,
+                term_prior=term_prior
+        )
+        self.transition_ratio = transition_ratio
+        # This is used to track how we arrived at the current state from
+        # the previous one. It is `None` for the first state, but for
+        # any new created states, it is set to the `_delta` attribute of
+        # either the `links_state` or the `parameters_state`, depending
+        # on which was used for the transition.
+        self._delta = None
+
+
+    def calc_log_prob_terms_selected(self):
+        """Calculates the log base 10 of the probability that the number
+        of terms selected would be as large as they are given the term
+        prior.
+
+        """
+        num_selected_terms = self.links_state.calc_num_selected_terms()
+        num_unselected_terms = (
+                self.links_state.calc_num_unselected_terms())
+        term_prior = self.parameters_state.term_prior
+        log_prob_terms_selected = (
+                (num_selected_terms * math.log10(term_prior)) +
+                (num_unselected_terms * math.log10(1 - term_prior))
+        )
+        return log_prob_terms_selected
+
+
+    def calc_log_prob_selected(self):
+        """Calculates the log base 10 of the probability that the number
+        of terms and links selected would be as large as they are given
+        the term and link priors.
+
+        """
+        links_log_prob_selected = super(
+                TermsBasedOverallState, self).calc_log_prob_selected()
+        # We need to include the additional probability of selecting the
+        # terms.
+        terms_log_prob_selected = self.calc_log_prob_terms_selected()
+        log_prob_selected = (terms_log_prob_selected +
+                links_log_prob_selected)
+        return log_prob_selected
 
