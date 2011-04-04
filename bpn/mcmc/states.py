@@ -90,8 +90,8 @@ class PLNParametersState(State):
           interactions which were included, but shouldn't have been
         - `beta`: the false-negative rate, the portion of gene-gene
           interactions which weren't included, but should have been
-        - `link_prior`: the assumed probability we would pick any one
-          link as being active
+        - `link_prior`: the assumed probability we would select any one
+          link
 
         """
         # We must first set up the link prior distribution; this cannot
@@ -143,8 +143,8 @@ class PLNParametersState(State):
           interactions which were included, but shouldn't have been
         - `beta`: the false-negative rate, the portion of gene-gene
           interactions which weren't included, but should have been
-        - `link_prior`: the assumed probability we would pick any one
-          link as being active
+        - `link_prior`: the assumed probability we would select any one
+          link
 
         """
         given_values = locals()
@@ -354,16 +354,16 @@ class RandomTransitionParametersState(PLNParametersState):
           interactions which were included, but shouldn't have been
         - `beta`: the false-negative rate, the portion of gene-gene
           interactions which weren't included, but should have been
-        - `link_prior`: the assumed probability we would pick any one
-          link as being active
+        - `link_prior`: the assumed probability we would select any one
+          link
 
         """
-        PLNParametersState.__init__(
+        super(RandomTransitionParametersState, self).__init__(
             self,
             number_of_links,
-            alpha,
-            beta,
-            link_prior
+            alpha=alpha,
+            beta=beta,
+            link_prior=link_prior
         )
         # We'll use this as a cache of the cutoffs, since it will never
         # change
@@ -379,7 +379,7 @@ class RandomTransitionParametersState(PLNParametersState):
             if SUPERDEBUG_MODE:
                 logger.log(SUPERDEBUG, "Caching parameter selection "
                         "cutoffs.")
-            cutoffs = PLNParametersState._construct_param_selection_cutoffs(self)
+            cutoffs = super(RandomTransitionParametersState, self)._construct_param_selection_cutoffs()
             self._parameter_selection_cutoffs = cutoffs
         return self._parameter_selection_cutoffs
 
@@ -394,10 +394,10 @@ class RandomTransitionParametersState(PLNParametersState):
         """
         num_neighbors_per_parameter = {}
         for param_name in self.parameter_names:
-            num_other_values_in_distribution = \
-                    len(getattr(self, '_%s_distribution' % param_name)) - 1
-            num_neighbors_per_parameter[param_name] = \
-                    num_other_values_in_distribution
+            num_other_values_in_distribution = (len(
+                    getattr(self, '_%s_distribution' % param_name)) - 1)
+            num_neighbors_per_parameter[param_name] = (
+                    num_other_values_in_distribution)
         return num_neighbors_per_parameter
 
 
@@ -455,11 +455,18 @@ class PLNLinksState(State):
         self.process_links = process_links
         self._annotated_interactions = annotated_interactions
         self._active_interactions = active_interactions
+
         # _interaction_selection_counts maintains the number of times a
         # gene-gene interaction has been "covered" by the selected
         # process links
+        #
+        # TODO: Copying this default dict is slow; refactor this code to
+        # instead use a numpy array, by converting each interaction from
+        # a tuple of gene names to an index (integer) in the array.
         self._interaction_selection_counts = collections.defaultdict(
                 int)
+        # _num_selected_active_interactions keeps a cache of how many
+        # active interactions are currently selected
         self._num_selected_active_interactions = 0
 
         # This variable is used to store the previous state that the
@@ -510,6 +517,21 @@ class PLNLinksState(State):
         return num_neighboring_states
 
 
+    def _mark_interactions_selected(self, interactions):
+        """Marks interactions as being selected by coannotating
+        links.
+
+        """
+        for interaction in interactions:
+            self._interaction_selection_counts[interaction] += 1
+            # If this is the first time selecting this interaction,
+            # and this interaction is noted as active, increment the
+            # active count
+            if (self._interaction_selection_counts[interaction] == 1) \
+                    and (interaction in self._active_interactions):
+                self._num_selected_active_interactions += 1
+
+
     def select_link(self, annotation1, annotation2):
         """Add a link to the set of selected links.
 
@@ -527,19 +549,29 @@ class PLNLinksState(State):
                     % (annotation1, annotation2))
         self.selected_links.add((annotation1, annotation2))
         self.unselected_links.remove((annotation1, annotation2))
-        link_annotated_interactions = \
+        link_annotated_interactions = (
             self._annotated_interactions.get_coannotated_interactions(
-                    annotation1, annotation2)
-        for interaction in link_annotated_interactions:
-            self._interaction_selection_counts[interaction] += 1
-            # If this is the first time selecting this interaction,
-            # and this interaction is noted as active, increment the
-            # active count
-            if (self._interaction_selection_counts[interaction] == 1) \
-                    and (interaction in self._active_interactions):
-                self._num_selected_active_interactions += 1
+                    annotation1, annotation2))
+        self._mark_interactions_selected(link_annotated_interactions)
         # Finally, we note in the delta this selection
         self._delta = ('selection', (annotation1, annotation2))
+
+
+    def _mark_interactions_unselected(self, interactions):
+        """Marks interactions as being unselected by coannotating
+        links.
+
+        """
+        for interaction in interactions:
+            self._interaction_selection_counts[interaction] -= 1
+            # If we have removed the only link which selected this
+            # interaction, remove the interaction from the dictionary
+            if not self._interaction_selection_counts[interaction]:
+                del self._interaction_selection_counts[interaction]
+                # Further, if it was an active interaction, deduct from
+                # the count of selected active interactions
+                if interaction in self._active_interactions:
+                    self._num_selected_active_interactions -= 1
 
 
     def unselect_link(self, annotation1, annotation2):
@@ -559,19 +591,10 @@ class PLNLinksState(State):
                     % annotation1, annotation2)
         self.unselected_links.add((annotation1, annotation2))
         self.selected_links.remove((annotation1, annotation2))
-        link_annotated_interactions = \
+        link_annotated_interactions = (
             self._annotated_interactions.get_coannotated_interactions(
-                    annotation1, annotation2)
-        for interaction in link_annotated_interactions:
-            self._interaction_selection_counts[interaction] -= 1
-            # If we have removed the only link which selected this
-            # interaction, remove the interaction from the dictionary
-            if not self._interaction_selection_counts[interaction]:
-                del self._interaction_selection_counts[interaction]
-                # Further, if it was an active interaction, deduct from
-                # the count of selected active interactions
-                if interaction in self._active_interactions:
-                    self._num_selected_active_interactions -= 1
+                    annotation1, annotation2))
+        self._mark_interactions_unselected(link_annotated_interactions)
         # Finally, we note in the delta this unselection
         self._delta = ('unselection', (annotation1, annotation2))
 
@@ -781,7 +804,7 @@ class ArrayLinksState(PLNLinksState):
             selected_links_indices,
             active_interactions
         ):
-        """Create a new PLNLinksState instance
+        """Create a new ArrayLinksState instance
 
         :Parameters:
         - `annotated_interactions`: an `AnnotatedInteractionsArray`
@@ -823,17 +846,10 @@ class ArrayLinksState(PLNLinksState):
                     "marked selected." % index)
         self.link_selections[index] = True
         self._num_selected_links += 1
-        link_annotated_interactions = \
+        link_annotated_interactions = (
             self._annotated_interactions.get_coannotated_interactions(
-                    index)
-        for interaction in link_annotated_interactions:
-            self._interaction_selection_counts[interaction] += 1
-            # If this is the first time selecting this interaction,
-            # and this interaction is noted as active, increment the
-            # active count
-            if (self._interaction_selection_counts[interaction] == 1) \
-                    and (interaction in self._active_interactions):
-                self._num_selected_active_interactions += 1
+                    index))
+        self._mark_interactions_selected(link_annotated_interactions)
         # Finally, we note in the delta this selection
         self._delta = ('selection', index)
 
@@ -850,19 +866,10 @@ class ArrayLinksState(PLNLinksState):
                     "marked unselected." % index)
         self.link_selections[index] = False
         self._num_selected_links -= 1
-        link_annotated_interactions = \
+        link_annotated_interactions = (
             self._annotated_interactions.get_coannotated_interactions(
-                    index)
-        for interaction in link_annotated_interactions:
-            self._interaction_selection_counts[interaction] -= 1
-            # If we have removed the only link which selected this
-            # interaction, remove the interaction from the dictionary
-            if not self._interaction_selection_counts[interaction]:
-                del self._interaction_selection_counts[interaction]
-                # Further, if it was an active interaction, deduct from
-                # the count of selected active interactions
-                if interaction in self._active_interactions:
-                    self._num_selected_active_interactions -= 1
+                    index))
+        self._mark_interactions_unselected(link_annotated_interactions)
         # Finally, we note in the delta this unselection
         self._delta = ('unselection', index)
 
@@ -1073,9 +1080,8 @@ class PLNOverallState(State):
           more information
         - `beta`: the false-negative rate; see `PLNParametersState` for
           more information
-        - `link_prior`: the assumed probability we would pick any one
-          link as being active; see `PLNParametersState` for more
-          information
+        - `link_prior`: the assumed probability we would select any one
+          link; see `PLNParametersState` for more information
         - `parameters_state_class`: the class of the parameters state to
           use [default: `PLNParametersState`]
 
@@ -1161,7 +1167,6 @@ class PLNOverallState(State):
         num_selected_links = self.links_state.calc_num_selected_links()
         num_unselected_links = \
                 self.links_state.calc_num_unselected_links()
-        num_total_links = num_selected_links + num_unselected_links
         link_prior = self.parameters_state.link_prior
         log_prob_of_selected = \
                 (num_selected_links * \
@@ -1250,16 +1255,15 @@ class ArrayOverallState(PLNOverallState):
           more information
         - `beta`: the false-negative rate; see `PLNParametersState` for
           more information
-        - `link_prior`: the assumed probability we would pick any one
-          link as being active; see `PLNParametersState` for more
-          information
+        - `link_prior`: the assumed probability we would select any one
+          link; see `PLNParametersState` for more information
         - `parameters_state_class`: the class of the parameters state to
           use [default: `PLNParametersState`]
         - `links_state_class`: the class of the links state to use
           [default: `ArrayLinksState`]
 
         """
-        num_process_links = len(annotated_interactions.get_all_links())
+        num_process_links = annotated_interactions.calc_num_links()
         if selected_links_indices is None:
             # Note that we're randomly selecting a random number of
             # indices here.
