@@ -17,6 +17,9 @@ import math
 import random
 
 import numpy
+import scipy
+
+import bpn.structures
 
 import logging
 logger = logging.getLogger('bpn.mcmcbpn.states')
@@ -1050,6 +1053,231 @@ class NoSwapArrayLinksState(ArrayLinksState):
             selected_link_index = self.choose_random_selected_link()
             new_state.unselect_link(selected_link_index)
 
+        return new_state
+
+
+class TermsAndLinksState(NoSwapArrayLinksState):
+    """A representation of the terms and links selected to explain
+    observed data.
+
+    """
+    def __init__(
+            self,
+            annotated_interactions,
+            selected_links_indices,
+            active_interactions
+        ):
+        """Create a new ArrayLinksState instance
+
+        :Parameters:
+        - `annotated_interactions`: an `AnnotatedInteractions2dArray`
+          instance
+        - `selected_links_indices`: indices for the subset of links
+          being considered as "selected" initially in the process
+          linkage network
+        - `active_interactions`: a set of interactions that are
+          considered "active"
+
+        """
+        self._annotated_interactions = annotated_interactions
+        self._num_terms = annotated_interactions.calc_num_terms()
+        self._num_selected_terms = 0
+        self._num_links = annotated_interactions.calc_num_links()
+        self._num_selected_links = 0
+        self._active_interactions = active_interactions
+        self._interaction_selection_counts = collections.defaultdict(
+                int)
+        self._num_selected_active_interactions = 0
+
+        # link_selections is a 2-dimensional symmetric array of boolean
+        # data type, where the value at each index is `True` if the link
+        # represented by that index has been selected, or `False` if the
+        # link is not selected.
+        self.link_selections = bpn.structures.symzeros(self._num_terms,
+                bool)
+
+        # _term_selections is an array of integers, where a positive
+        # value indicates the term is selected.
+        self._term_selections = numpy.zeros(self._num_terms, int)
+
+        if selected_links_indices:
+            for index in selected_links_indices:
+                self.select_link(index)
+        else:
+            # We have to have at least one link selected.
+            interactions = None
+            random_term1 = None
+            random_term2 = None
+            while (random_term1 == random_term2) or (interactions is
+                    None):
+                random_term1 = random.randrange(self._num_terms)
+                random_term2 = random.randrange(self._num_terms)
+                interactions = (
+                        self._annotated_interactions.get_coannotated_interactions(
+                            (random_term1, random_term2))
+                )
+            self.select_link((random_term1, random_term2))
+
+        self._delta = None
+
+
+    def copy(self):
+        """Create a copy of this state instance."""
+        newcopy = copy.copy(self)
+        newcopy._term_selections = self._term_selections.copy()
+        newcopy.link_selections = self.link_selections.copy()
+        newcopy._interaction_selection_counts = \
+                self._interaction_selection_counts.copy()
+        return newcopy
+
+
+    def calc_num_neighboring_states(self):
+        """Calculates the number of possible neighboring states."""
+        # The number of neighboring states depends on two scenarios:
+        #
+        # The first scenario is a selected term is chosen first; then,
+        # the number of terms considered possible to partner in a
+        # link-based transition (selection or unselection) is all of the
+        # other terms. There is only one option per pairing: marking the
+        # link as selected if it's not already, or unmarking it if it is
+        # already marked.
+        num_selected_term_neighboring_states = (
+                self._num_selected_terms * (self._num_terms - 1))
+        # The second scenario is an unselected term is chosen first;
+        # then, it may only partner with selected terms (and the only
+        # option is to mark their link selected).
+        num_unselected_term_neighboring_states = (
+                (self._num_terms - self._num_selected_terms) *
+                self._num_selected_terms
+        )
+        num_neighboring_states = (num_selected_term_neighboring_states +
+                num_unselected_term_neighboring_states)
+        return num_neighboring_states
+
+
+    def calc_num_terms(self):
+        """Returns the number of terms available."""
+        return self._num_terms
+
+
+    def calc_num_selected_terms(self):
+        """Returns the number of selected terms."""
+        return self._num_selected_terms
+
+
+    def calc_num_unselected_terms(self):
+        """Returns the number of unselected terms."""
+        return self._num_terms - self._num_selected_terms
+
+
+    def calc_num_links(self):
+        """Returns the number of links available in the current state.
+
+        Note that the number of links available is different than the
+        number of valid links (co-annotating pairs of terms). More
+        specifically, the number of links available is based instead on
+        the number of terms currently selected in the state.
+        Specifically, the value is (``number_of_selected_terms`` choose
+        ``2``).
+
+        """
+        num_possible_links = scipy.comb(self._num_selected_terms, 2,
+                exact=True)
+        return num_possible_links
+
+
+    def select_term(self, term):
+        """Mark a term as selected (again)."""
+        if not self._term_selections[term]:
+            self._num_selected_terms += 1
+        self._term_selections[term] += 1
+
+
+    def unselect_term(self, term):
+        """Unmark a term as selected (again)."""
+        self._term_selections[term] -= 1
+        if not self._term_selections[term]:
+            self._num_selected_terms -= 1
+
+
+    def select_link(self, index):
+        """Mark a link as selected.
+
+        :Parameters:
+        - `index`: the 2-dimensional index of the link to mark as
+          selected
+
+        """
+        super(TermsAndLinksState, self).select_link(index)
+        self.select_term(index[0])
+        self.select_term(index[1])
+
+
+    def unselect_link(self, index):
+        """Mark a link as unselected.
+
+        :Parameters:
+        - `index`: the 2-dimensional index of the link to mark as
+          unselected
+
+        """
+        super(TermsAndLinksState, self).unselect_link(index)
+        self.unselect_term(index[0])
+        self.unselect_term(index[0])
+
+
+    def _draw_random_valid_link(self):
+        """Draws a random link from among those valid ones.
+
+        The draw is done discriminantly, with the first draw of one term
+        dictating the pool from which the second term for the link may
+        be drawn.
+
+        """
+        num_choices_discarded = -1
+        term1 = None
+        term2 = None
+        interactions = None
+        selected_terms = self._term_selections.nonzero()[0]
+        while (term1 == term2) or (interactions is None):
+            num_choices_discarded += 1
+            # Select a term uniformly at random.
+            term1 = random.randrange(self._num_terms)
+            # Determine if that term is already in the set of selected
+            # terms.
+            if self._term_selections[term1]:
+                # The term is in the set of selected; choose another
+                # term uniformly at random from all other terms.
+                term2 = random.randrange(self._num_terms)
+            else:
+                # The term is not in the set of selected; choose another
+                # term uniformly at random from the set of selected
+                # terms.
+                term2 = random.choice(selected_terms)
+            interactions = (
+                    self._annotated_interactions.get_coannotated_interactions(
+                        (term1, term2))
+            )
+
+        if num_choices_discarded:
+            logger.debug("Discarded {0} choices.".format(
+                    num_choices_discarded))
+
+        return (term1, term2)
+
+
+    def create_new_state(self):
+        """Creates a new state on the basis of this state instance."""
+        logger.debug("Creating a new links state.")
+        # First, get an identical copy of this state
+        new_state = self.copy()
+        random_link = new_state._draw_random_valid_link()
+        if new_state.link_selections[random_link]:
+            # Remove the link if it's already a candidate.
+            new_state.unselect_link(random_link)
+        else:
+            # Add the link if it's not a candidate.
+            new_state.select_link(random_link)
         return new_state
 
 
