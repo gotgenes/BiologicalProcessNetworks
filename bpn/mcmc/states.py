@@ -845,8 +845,8 @@ class ArrayLinksState(PLNLinksState):
 
         """
         if self.link_selections[index]:
-            raise ValueError("The link at index %d has already been "
-                    "marked selected." % index)
+            raise ValueError(("The link at index {0} has already been "
+                    "marked selected.").format(index))
         self.link_selections[index] = True
         self._num_selected_links += 1
         link_annotated_interactions = (
@@ -865,8 +865,8 @@ class ArrayLinksState(PLNLinksState):
 
         """
         if not self.link_selections[index]:
-            raise ValueError("The link at index %d has already been "
-                    "marked unselected." % index)
+            raise ValueError(("The link at index %d has already been "
+                    "marked unselected.").format(index))
         self.link_selections[index] = False
         self._num_selected_links -= 1
         link_annotated_interactions = (
