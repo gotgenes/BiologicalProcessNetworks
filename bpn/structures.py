@@ -472,6 +472,7 @@ class AnnotatedInteractionsGraph(object):
         # the NetworkX Graph class.
         self._num_interactions = None
         self._create_interaction_annotations(links_of_interest)
+        self._num_terms = None
         self._num_annotation_pairs = None
 
 
@@ -560,14 +561,21 @@ class AnnotatedInteractionsGraph(object):
         return self._annotations_to_interactions.keys()
 
 
+    def calc_num_terms(self):
+        """Returns the number of terms annotating the interactions."""
+        if self._num_terms is None:
+            self._num_terms = len(self._annotation_terms)
+        return self._num_terms
+
+
     def calc_num_links(self):
         """Returns the number of annotation pairs annotating the
         interactions.
 
         """
         if self._num_annotation_pairs is None:
-            self._num_annotation_pairs = \
-                    len(self._annotations_to_interactions)
+            self._num_annotation_pairs = len(
+                    self._annotations_to_interactions)
         return self._num_annotation_pairs
 
 
