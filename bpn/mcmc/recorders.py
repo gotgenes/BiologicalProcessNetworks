@@ -15,6 +15,7 @@ import numpy
 import logging
 logger = logging.getLogger('bpn.mcmcbpn.recorders')
 
+from bpn import structures
 from defaults import SUPERDEBUG, SUPERDEBUG_MODE
 
 
@@ -329,6 +330,164 @@ class DetailedArrayStateRecorder(ArrayStateRecorder):
 
         """
         super(DetailedArrayStateRecorder, self).record_state(
+                markov_chain)
+        self.record_overall_state(markov_chain.current_state)
+
+
+    def write_transition_states(
+            self,
+            out_csvfile,
+            buffer_size=100
+        ):
+        """Writes the transition state information for the Markov chain
+        to CSV files.
+
+        :Parameters:
+        - `out_csvfile`: a `csv.DictWriter` instance to output the
+          transition information for the burn-in period, with these
+          fields: `transition_type`, `log_transition_ratio`, `accepted`
+        - `buffer_size`: the number of records to write to disk at once
+
+        """
+        output_records = []
+
+        for i, transition_info in enumerate(
+                self._transitions_data):
+            record = {
+                    'transition_type': transition_info[0],
+                    'log_transition_ratio': str(transition_info[1]),
+                    'log_state_likelihood': str(transition_info[2]),
+                    'accepted': str(transition_info[3]).lower()
+            }
+            record.update(self._overall_data[i])
+            output_records.append(record)
+            # Periodically flush results to disk
+            if not ((i + 1) % buffer_size):
+                out_csvfile.writerows(output_records)
+                # Flush the scores
+                output_records = []
+
+        # Flush any remaining records
+        if output_records:
+            out_csvfile.writerows(output_records)
+
+
+class TermsStateRecorder(ArrayStateRecorder):
+    """Similar to `PLNStateRecorder`, however, adapted to record the
+    state of `TermsBasedOverallState` instances.
+
+    """
+    def __init__(self, annotated_interactions, parameter_distributions):
+        """Create a new instance.
+
+        :Parameters:
+        - `annotated_interactions`: an ``AnnotatedInteractions2dArray``
+          instance
+        - `parameter_distributions`: a dictionary with the names of the
+          parameters and their possible distribution values
+
+        """
+        self._annotated_interactions = annotated_interactions
+        self.records_made = 0
+        num_terms = self._annotated_interactions.calc_num_terms()
+        self.selected_links_tallies = structures.symzeros(num_terms,
+                int)
+        self.parameter_tallies = {}
+        for param_name, distribution in parameter_distributions.items():
+            distribution_dict = dict.fromkeys(distribution, 0)
+            self.parameter_tallies[param_name] = distribution_dict
+        self._transitions_data = []
+
+
+    def write_links_probabilities(self, out_csvfile, buffer_size=100):
+        """Output the final probabilities for the links.
+
+        :Parameters:
+        - `out_csvfile`: a `csv.DictWriter` instance with these fields:
+          `term1`, `term2`, `probability`
+        - `buffer_size`: the number of records to write to disk at once
+
+        """
+        num_total_steps = float(self.records_made)
+        link_probabilities = (self.selected_links_tallies /
+                num_total_steps)
+        output_records = []
+
+        # This gives the pairwise ``(term1_index, term2_index)`` indices
+        # of any links which were marked as selected 1 or more times
+        # throughout all recorded steps of the Markov chain.
+        selected_links_indices = zip(
+                *numpy.triu(self.selected_links_tallies).nonzero())
+
+        for i, index in enumerate(selected_links_indices):
+            # Get the actual terms from the indices.
+            term1, term2 = self._annotated_interactions.get_termed_link(
+                    index)
+            link_probability = link_probabilities[index]
+            output_records.append(
+                    {
+                        'term1': term1,
+                        'term2': term2,
+                        'probability': link_probability
+                    }
+            )
+            # Periodically flush results to disk
+            if not ((i + 1) % buffer_size):
+                out_csvfile.writerows(output_records)
+                # Flush the scores
+                output_records = []
+
+        # Flush any remaining records
+        if output_records:
+            out_csvfile.writerows(output_records)
+
+
+class DetailedTermsStateRecorder(TermsStateRecorder):
+    def __init__(self, annotated_interactions, parameter_distributions):
+        super(DetailedTermsStateRecorder, self).__init__(
+                annotated_interactions, parameter_distributions)
+        # We're using this variable to store the information of the
+        # overall state.
+        self._overall_data = []
+
+
+    def record_overall_state(self, overall_state):
+        """Record all the numbers of the current state.
+
+        :Parameters:
+        - `overall_state`: an `ArrayOverallState` instance
+
+        """
+        state_info = {}
+        parameters_state = overall_state.parameters_state
+        state_info['alpha'] = parameters_state.alpha
+        state_info['beta'] = parameters_state.beta
+        state_info['term_prior'] = parameters_state.term_prior
+        state_info['link_prior'] = parameters_state.link_prior
+        links_state = overall_state.links_state
+        state_info['num_selected_links'] = (
+                links_state.calc_num_selected_links())
+        state_info['num_unselected_links'] = (
+                links_state.calc_num_unselected_links())
+        state_info['num_selected_active_interactions'] = (
+                links_state.calc_num_selected_active_interactions())
+        state_info['num_selected_inactive_interactions'] = (
+                links_state.calc_num_selected_inactive_interactions())
+        state_info['num_unselected_active_interactions'] = (
+                links_state.calc_num_unselected_active_interactions())
+        state_info['num_unselected_inactive_interactions'] = (
+                links_state.calc_num_unselected_inactive_interactions())
+        self._overall_data.append(state_info)
+
+
+    def record_state(self, markov_chain):
+        """Record the features of the current state.
+
+        :Parameters:
+        - `markov_chain`: an `ArrayMarkovChain` instance
+
+        """
+        super(DetailedTermsStateRecorder, self).record_state(
                 markov_chain)
         self.record_overall_state(markov_chain.current_state)
 
