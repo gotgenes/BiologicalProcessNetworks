@@ -15,6 +15,7 @@ import itertools
 import random
 
 import networkx
+import numpy
 
 from mcmc.defaults import BROADCAST_PERCENT, SUPERDEBUG, SUPERDEBUG_MODE
 
@@ -428,6 +429,40 @@ class McmcInputData(BplnInputData):
         self.detailed_transitions = detailed_transitions
 
 
+class Symmetrical2dArray(numpy.ndarray):
+    """A symmetrical 2-dimensional NumPy array."""
+    def __init__(self, shape, dtype=float, buffer=None, offset=0,
+            strides=None, order=None):
+        if len(shape) != 2:
+            raise ValueError("shape must be two integers")
+        numpy.ndarray.__init__(self, shape, dtype=float,
+                buffer=None, offset=0, strides=None, order=None)
+
+
+    def __setitem__(self, (i, j), value):
+        numpy.ndarray.__setitem__(self, (i, j), value)
+        numpy.ndarray.__setitem__(self, (j, i), value)
+
+
+def symzeros(length, dtype=float, order='C'):
+    """Constructs a SymNDArray with all elements set to 0.
+
+    Similar to numpy.zeros
+
+    :Parameters:
+    - `length`: the length of one dimension of the array (i.e., number
+      of rows)
+    - `dtype`: Desired data-type for the array
+    - `order`: either C ('C') or Fortran ('F') ordering
+
+    """
+    shape = (length, length)
+    z = numpy.zeros(shape, dtype=dtype, order=order)
+    a = Symmetrical2dArray(shape, dtype=z.dtype, buffer=z,
+            order=order)
+    return a
+
+
 class AnnotatedInteractionsGraph(object):
     """A class that provides access to a mapping from process links
     (pairs of annotations) to the interactions which they co-annotate.
@@ -690,6 +725,16 @@ class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
         return self._num_annotation_pairs
 
 
+    def get_link(self, link_index):
+        """Returns the link at the given index.
+
+        :Parameters:
+        - `link_index`: the index of the link of interest
+
+        """
+        return self._links[link_index]
+
+
     def get_coannotated_interactions(self, link_index):
         """Returns a `set` of all interactions for which one gene is
         annotated with the first term, and the other gene is annotated
@@ -705,6 +750,115 @@ class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
 
 
     # TODO: Add support for intraterm interactions
+
+
+class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
+    def _map_terms_to_indices(self):
+        self._annotation_terms = sorted(self._annotation_terms)
+        self._terms_to_indices = {}
+        for i, term in enumerate(self._annotation_terms):
+            self._terms_to_indices[term] = i
+
+
+    def _post_process_structures(self):
+        logger.info("Converting to more efficient data structures.")
+        self._map_terms_to_indices()
+        # Get linearized lists of the links and their interactions.
+        named_links, self._link_interactions = (
+                self._annotations_to_interactions.keys(),
+                self._annotations_to_interactions.values()
+        )
+
+        num_terms = len(self._annotation_terms)
+        # This 2d symmetric array will map a pair of link indices to
+        # their respective interactions, contained in the list
+        # self._link_interactions.
+        #
+        # This array will also help serve as a way of confirming
+        # whether or not a link is valid, as a non-zero value for that
+        # position in the 2d array indicates the link co-annotates one
+        # or more interactions.
+        self._links_to_interactions = symzeros(num_terms, int)
+
+        # The idea here is that, by the end of this next loop, we will
+        # mark the 2d array self._links_to_interactions with the index
+        # at which we can find the interactions co-annotated by the
+        # link.
+        for i, link in enumerate(named_links):
+            term1_index = self._terms_to_indices[link[0]]
+            term2_index = self._terms_to_indices[link[1]]
+            # Note that we're going to add 1 to the index; see
+            # explanation below.
+            self._links_to_interactions[term1_index, term2_index] = (i +
+                    1)
+
+        # Now we will compensate for having a 1-based index into
+        # self._link_interactions by padding it with None at index 0.
+        # This will have the added benefit that any "invalid link" of
+        # self._links_to_interactions will point to None as its
+        # interactions, allowing us to identify it as an invalid link.
+        self._link_interactions.insert(0, None)
+
+        # Delete the dictionary mapping since we will not use it
+        # hereafter.
+        del self._annotations_to_interactions
+
+
+    def get_termed_link(self, link_index):
+        """Returns a link with the actual annotation terms instead of
+        term indices.
+
+        :Parameters:
+        - `link_index`: the index of the link of interest
+
+        """
+        termed_link = (self._annotation_terms[link_index[0]],
+                self._annotation_terms[link_index[1]])
+        return termed_link
+
+
+    def get_coannotated_interactions(self, link_index):
+        """Returns a `set` of all interactions for which one gene is
+        annotated with the first term, and the other gene is annotated
+        with the second term, for the pair of terms represented by the
+        index.
+
+        Returns ``None`` if the terms co-annotate no interactions.
+
+        :Parameters:
+        - `link_index`: the two-dimensional index of the link whose
+          interactions are sought
+
+        """
+        interactions_index = self._links_to_interactions[link_index]
+        return self._link_interactions[interactions_index]
+
+
+    def get_all_links(self):
+        """Returns a list of all the annotation pairs annotating the
+        interactions.
+
+        Note that this only returns valid links (pairs of terms which
+        co-annotate one or more interactions), rather than all pairwise
+        combinations of annotation terms.
+
+        """
+        # Since the matrix is symmetrical, using nonzero() would give
+        # two indices per each valid link; we only need one of those, so
+        # we first get the upper-triangle of the matrix, and then return
+        # the nonzero of that, zipped so that the indices, returned by
+        # nonzero as (X, Y), are returned instead as (x_1, y_1), (x_2,
+        # y_2), etc.
+        valid_links = zip(
+                *numpy.triu(self._links_to_interactions).nonzero())
+        return valid_links
+
+
+    def calc_num_links(self):
+        if self._num_annotation_pairs is None:
+            self._num_annotation_pairs = len(
+                    numpy.triu(self._links_to_interactions).nonzero()[0])
+        return self._num_annotation_pairs
 
 
 class IntratermInteractionsArray(AnnotatedInteractionsArray):
@@ -725,15 +879,19 @@ class IntratermInteractionsArray(AnnotatedInteractionsArray):
         # We need to convert self._links from a list of tuples of
         # annotation terms to a list of tuples of integers, where each
         # integer represents some annotation term.
-        #
+
         # First, let's convert the annotation_terms attribute into a
         # sorted list.
         self._annotation_terms = sorted(self._annotation_terms)
+        # We'll also cache the number of terms.
+        self._num_terms = len(self._annotation_terms)
+
         # Now we create a temporary dictionary to map from annotation
         # terms to their respective indices.
         term_map = {}
         for i, term in enumerate(self._annotation_terms):
             term_map[term] = i
+
         # Now we process self._links into tuples of integers instead of
         # tuples of strings.
         #
@@ -744,8 +902,11 @@ class IntratermInteractionsArray(AnnotatedInteractionsArray):
         # higher second, in the resulting converted tuple.
         for i, link in enumerate(self._links):
             self._links[i] = (term_map[link[0]], term_map[link[1]])
+
         # Now we must convert the intraterm interactions.
         self._intraterm_interactions = [
                 self._intraterm_interactions[term] for term in
                 self._annotation_terms
         ]
+
+
