@@ -5,7 +5,7 @@ from setuptools import setup
 
 import os.path
 
-scripts = ['bpln', 'cbpn', 'mcmcbpn']
+scripts = ['bpln', 'cbpn', 'mcmcbpn', 'sabpn']
 scripts = [os.path.sep.join(('scripts', script)) for script in scripts]
 
 setup(
