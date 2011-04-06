@@ -433,6 +433,72 @@ class McmcInputData(BplnInputData):
         self.detailed_transitions = detailed_transitions
 
 
+class SaInputData(BplnInputData):
+    def __init__(
+            self,
+            interactions_graph,
+            annotations_dict,
+            annotations_stats,
+            steps,
+            activity_threshold,
+            free_parameters,
+            disable_swaps,
+            transition_ratio,
+            links_outfile,
+            parameters_outfile,
+            transitions_outfile,
+            detailed_transitions,
+            **kwargs
+        ):
+        """Create a new instance.
+
+        :Parameters:
+        - `interaction_graph`: graph containing the gene-gene or gene
+          product-gene product interactions
+        - `annotations_dict`: a dictionary with annotation terms as keys
+          and `set`s of genes as values
+        - `annotations_stats`: a dictionary containing statistics about
+          the annotations
+        - `steps`: the number of steps to anneal
+        - `activity_threshold`: the threshold at which a gene is
+          declared active
+        - `free_parameters`: `True` if parameters are free take a random
+          value from their distribution, `False` if they may only take
+          adjoining values
+        - `disable_swaps`: `True` if swap transitions are to be
+          disabled, `False` otherwise.
+        - `transition_ratio`: a `float` indicating the ratio of link
+          transitions to parameter transitions
+        - `links_outfile`: file for output of link results
+        - `parameters_outfile`: file for output of parameters results
+        - `transitions_outfile`: file for output of transitions data
+        - `detailed_transitions`: `True` if detailed output of the
+          transitions is desired, `False` otherwise
+
+        """
+        super(SaInputData, self).__init__(
+            interactions_graph=interactions_graph,
+            annotations_dict=annotations_dict,
+            annotations_stats=annotations_stats,
+            links=None,
+            num_links=None,
+            links_outfile=links_outfile,
+            **kwargs
+        )
+        # User-defined subset of links to test is inappropriate for SA
+        # BPLN, so we remove those.
+        del self.links
+        del self.num_links
+        self.steps = steps
+        self.activity_threshold = activity_threshold
+        self.free_parameters = free_parameters
+        self.disable_swaps = disable_swaps
+        self.transition_ratio = transition_ratio
+        self.parameters_outfile = parameters_outfile
+        self.transitions_outfile = transitions_outfile
+        self.detailed_transitions = detailed_transitions
+
+
 class Symmetrical2dArray(numpy.ndarray):
     """A symmetrical 2-dimensional NumPy array."""
     def __init__(self, shape, dtype=float, buffer=None, offset=0,
