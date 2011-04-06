@@ -335,6 +335,60 @@ class McmcArgParser(ExpressionBasedArgParser):
                 help="compress transitions file using bzip2"
         )
 
+class SaArgParser(ExpressionBasedArgParser):
+    """Command line parser for SA BPLN."""
+
+    _prog_name = 'sabpn'
+
+    def make_cli_parser(self):
+        """Create the command line interface for SA BPLN."""
+        super(SaArgParser, self).make_cli_parser()
+        self.cli_parser.add_option('--steps', type='int',
+                default=mcmc.defaults.NUM_STEPS,
+                help=("the number of steps to Anneal. "
+				"[default: %default]")
+        )
+        self.cli_parser.add_option('--activity-threshold',
+                type='float',
+                default=mcmc.defaults.ACTIVITY_THRESHOLD,
+                help=("set the (differential) expression threshold at "
+                    "which a gene is considered active [default: "
+                    "%default=-log10(0.05)]")
+        )
+        self.cli_parser.add_option('--free-parameters',
+                action='store_true',
+                help=("parameters will be adjusted randomly, rather "
+                    "than incrementally")
+        )
+        self.cli_parser.add_option('--disable-swaps', action='store_true',
+                help=("disables swapping links as an option for "
+                    "transitions")
+        )
+        self.cli_parser.add_option('--transition-ratio', type='float',
+                default=0.9,
+                help=("The target ratio of proposed link transitions "
+                    "to proposed parameter transitions [default: "
+                    "%default]"
+                )
+        )
+        self.cli_parser.add_option('--parameters-outfile',
+                default=mcmc.defaults.PARAMETERS_OUTFILE,
+                help=("the file to which the parameters results should "
+                    "be written [default: %default]")
+        )
+        self.cli_parser.add_option('--transitions-outfile',
+                default=mcmc.defaults.TRANSITIONS_OUTTFILE,
+                help=("the file to which the transitions data should "
+                    "be written [default: %default]")
+        )
+        self.cli_parser.add_option('--detailed-transitions',
+                action='store_true',
+                help=("Transitions file includes full information about "
+                    "each step's state.")
+        )
+        self.cli_parser.add_option('--bzip2', action='store_true',
+                help="compress transitions file using bzip2"
+        )
 
 class BplnCli(object):
     """Command line interface for BPLN."""
@@ -663,4 +717,46 @@ class McmcCli(ContextualCli):
         )
         return data
 
+class SaCli(ContextualCli):
+    """Command line interface for SA BPLN."""
+    def __init__(self):
+        self.cli_parser = SaArgParser()
 
+
+    def _open_output_files(self):
+        super(SaCli, self)._open_output_files()
+        self.parameters_outfile = open(self.opts.parameters_outfile,
+                'wb')
+        if self.opts.bzip2:
+            if not self.opts.transitions_outfile.endswith('.bz2'):
+                bz2_filename = self.opts.transitions_outfile + '.bz2'
+            else:
+                bz2_filename = self.opts.transitions_outfile
+            self.transitions_outfile = bz2.BZ2File(bz2_filename, 'w')
+        else:
+            self.transitions_outfile = open(
+                    self.opts.transitions_outfile, 'wb')
+
+
+    def _construct_links_of_interest(self):
+        # Overridden to do nothing since it's not applicable to MCMC
+        # BPLN. It's not elegant, but it works.
+        pass
+
+
+    def _construct_data_struct(self):
+        data = structures.SaInputData(
+                interactions_graph=self.interactions_graph,
+                annotations_dict=self.annotations_dict,
+                annotations_stats=self.annotations_stats,
+                steps=self.opts.steps,
+                activity_threshold=self.opts.activity_threshold,
+                free_parameters=self.opts.free_parameters,
+                disable_swaps=self.opts.disable_swaps,
+                transition_ratio=self.opts.transition_ratio,
+                links_outfile=self.links_outfile,
+                transitions_outfile=self.transitions_outfile,
+                parameters_outfile=self.parameters_outfile,
+                detailed_transitions=self.opts.detailed_transitions
+        )
+        return data
