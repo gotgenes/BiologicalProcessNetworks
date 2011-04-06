@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+
+# Copyright (c) 2011 Chris D. Lasher & Phillip J. Whisenhunt
+#
+# This software is released under the MIT License. Please see
+# LICENSE.txt for details.
+
+
+import bpn.mcmc.sabpn
+bpn.mcmc.sabpn.main()
