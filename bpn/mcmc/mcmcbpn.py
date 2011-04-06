@@ -115,6 +115,11 @@ def main(argv=None):
                     input_data.transitions_outfile,
                     TRANSITIONS_FIELDNAMES
             )
+        if input_data.intraterms:
+            logger.info("Considering intra-term interactions.")
+            links_state_class = states.IntraTermsAndLinksState
+        else:
+            links_state_class = states.TermsAndLinksState
         markov_chain = chains.TermsBasedMarkovChain(
                 annotated_interactions,
                 input_data.activity_threshold,
@@ -122,6 +127,7 @@ def main(argv=None):
                 num_steps=input_data.steps,
                 burn_in=input_data.burn_in,
                 state_recorder_class=state_recorder_class,
+                links_state_class=links_state_class
         )
     else:
         if input_data.disable_swaps:

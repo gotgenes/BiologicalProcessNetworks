@@ -371,6 +371,7 @@ class McmcInputData(BplnInputData):
             free_parameters,
             disable_swaps,
             terms_based,
+            intraterms,
             transition_ratio,
             links_outfile,
             parameters_outfile,
@@ -399,6 +400,7 @@ class McmcInputData(BplnInputData):
           disabled, `False` otherwise.
         - `terms_based`: `True` if terms-based model is to be used,
           `False` otherwise
+        - `intraterms`: consider also intraterm interactions
         - `transition_ratio`: a `float` indicating the ratio of link
           transitions to parameter transitions
         - `links_outfile`: file for output of link results
@@ -427,6 +429,7 @@ class McmcInputData(BplnInputData):
         self.free_parameters = free_parameters
         self.disable_swaps = disable_swaps
         self.terms_based = terms_based
+        self.intraterms = intraterms
         self.transition_ratio = transition_ratio
         self.parameters_outfile = parameters_outfile
         self.transitions_outfile = transitions_outfile
@@ -931,8 +934,8 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
         return self._num_annotation_pairs
 
 
-class IntratermInteractionsArray(AnnotatedInteractionsArray):
-    """Similar to `AnnotatedInteractionsArray`, but with support for
+class IntratermInteractions2dArray(AnnotatedInteractions2dArray):
+    """Similar to `AnnotatedInteractions2dArray`, but with support for
     intraterm interactions.
 
     Additional changes include the following:
@@ -944,39 +947,17 @@ class IntratermInteractionsArray(AnnotatedInteractionsArray):
 
     """
     def _post_process_structures(self):
-        super(IntratermInteractionsArray,
+        super(IntratermInteractions2dArray,
                 self)._post_process_structures()
-        # We need to convert self._links from a list of tuples of
-        # annotation terms to a list of tuples of integers, where each
-        # integer represents some annotation term.
-
-        # First, let's convert the annotation_terms attribute into a
-        # sorted list.
-        self._annotation_terms = sorted(self._annotation_terms)
-        # We'll also cache the number of terms.
-        self._num_terms = len(self._annotation_terms)
-
-        # Now we create a temporary dictionary to map from annotation
-        # terms to their respective indices.
-        term_map = {}
-        for i, term in enumerate(self._annotation_terms):
-            term_map[term] = i
-
-        # Now we process self._links into tuples of integers instead of
-        # tuples of strings.
-        #
-        # We will take advantage of the fact that the annotation terms
-        # within the link tuples should be sorted in alphabetical order
-        # to guarantee that their corresponding integers will also be
-        # sorted such that the lower integer will appear first, and the
-        # higher second, in the resulting converted tuple.
-        for i, link in enumerate(self._links):
-            self._links[i] = (term_map[link[0]], term_map[link[1]])
-
-        # Now we must convert the intraterm interactions.
+        # Convert the intraterm interactions from a dictionary to a
+        # list, so that the index for the term indexes into the
+        # intraterm interactions.
         self._intraterm_interactions = [
-                self._intraterm_interactions[term] for term in
+                self._intraterm_interactions.get(term, None) for term in
                 self._annotation_terms
         ]
 
+    # Note that get_intraterm_interactions() inherited from
+    # AnnotatedInteractionsGraph should still work fine; since we'll be
+    # passing it an index.
 

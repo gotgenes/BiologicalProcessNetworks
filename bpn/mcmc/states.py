@@ -1433,6 +1433,74 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         return new_state
 
 
+class IntraTermsAndLinksState(TermsAndLinksState):
+    """Similar to `TermsAndLinksState`, but includes
+    intraterm-interactions for every term that participates in one or
+    more links.
+
+    """
+    def __init__(
+            self,
+            annotated_interactions,
+            selected_links_indices,
+            active_interactions
+        ):
+        """Create a new ArrayLinksState instance
+
+        :Parameters:
+        - `annotated_interactions`: an `IntratermInteractions2dArray`
+          instance
+        - `selected_links_indices`: indices for the subset of links
+          being considered as "selected" initially in the process
+          linkage network
+        - `active_interactions`: a set of interactions that are
+          considered "active"
+
+        """
+        super(IntraTermsAndLinksState, self).__init__(
+                annotated_interactions,
+                selected_links_indices,
+                active_interactions
+        )
+
+
+    def select_link(self, index):
+        """Mark a link as selected.
+
+        :Parameters:
+        - `index`: the 2-dimensional index of the link to mark as
+          selected
+
+        """
+        super(IntraTermsAndLinksState, self).select_link(index)
+        for term_index in index:
+            intraterm_interactions = (
+                    self._annotated_interactions.get_intraterm_interactions(
+                        term_index)
+            )
+            if intraterm_interactions:
+                self._mark_interactions_selected(intraterm_interactions)
+
+
+    def unselect_link(self, index):
+        """Mark a link as unselected.
+
+        :Parameters:
+        - `index`: the 2-dimensional index of the link to mark as
+          unselected
+
+        """
+        super(IntraTermsAndLinksState, self).unselect_link(index)
+        for term_index in index:
+            intraterm_interactions = (
+                    self._annotated_interactions.get_intraterm_interactions(
+                        term_index)
+            )
+            if intraterm_interactions:
+                self._mark_interactions_unselected(
+                        intraterm_interactions)
+
+
 class PLNOverallState(State):
     def __init__(
             self,
