@@ -14,7 +14,7 @@ import logging
 
 def _set_up_root_stream_logger(logger):
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setLevel(logging.INFO)
     logger.addHandler(stream_handler)
     formatter = logging.Formatter('%(message)s')
     stream_handler.setFormatter(formatter)
@@ -31,7 +31,7 @@ def _set_up_root_file_logger(logger, logfile):
 
 def set_up_root_logger(logfile=None):
     logger = logging.getLogger('bpn')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     _set_up_root_stream_logger(logger)
     if logfile is not None:
         _set_up_root_file_logger(logger, logfile)
