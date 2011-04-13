@@ -456,7 +456,7 @@ class SaInputData(BplnInputData):
         """Create a new instance.
 
         :Parameters:
-        - `interaction_graph`: graph containing the gene-gene or gene
+        - `interactions_graph`: graph containing the gene-gene or gene
           product-gene product interactions
         - `annotations_dict`: a dictionary with annotation terms as keys
           and `set`s of genes as values
@@ -575,9 +575,10 @@ class AnnotatedInteractionsGraph(object):
         # This will contain the names of of all the terms which
         # annotate the genes.
         self._annotation_terms = set()
-        # We'll use the following variable to cache the number of
-        # interactions present, since this is apparently not cached by
-        # the NetworkX Graph class.
+        # We'll use the following variables to cache the number of genes
+        # and interactions present, since this is apparently not cached
+        # by the NetworkX Graph class.
+        self._num_genes = None
         self._num_interactions = None
         self._create_interaction_annotations(links_of_interest)
         self._num_terms = None
@@ -688,11 +689,42 @@ class AnnotatedInteractionsGraph(object):
 
 
     def calc_num_interactions(self):
-        """Returns the total number of interactions."""
+        """Returns the total number of interactions.
+
+        NOTE: This number may be different than the number of
+        interactions co-annotated by links provided in
+        ``selected_links`` (i.e., it may be greater), as it represents
+        the number of interactions in the original gene-gene interaction
+        network passed in as ``interactions_graph`` during
+        initialization.
+
+        """
         if self._num_interactions is None:
-            self._num_interactions = \
-                    self._interactions_graph.number_of_edges()
+            self._num_interactions = (
+                    self._interactions_graph.number_of_edges())
         return self._num_interactions
+
+
+    def calc_num_genes(self):
+        """Returns the total number of genes.
+
+        NOTE: This number may be different than the number of
+        genes annotated by one or more terms in the links provided in
+        ``selected_links`` (i.e., it may be greater), as it represents
+        the number of genes in the original gene-gene interaction
+        network passed in as ``interactions_graph`` during
+        initialization.
+
+        """
+        if self._num_genes is None:
+            self._num_genes = (
+                    self._interactions_graph.number_of_nodes())
+        return self._num_genes
+
+
+    def get_annotated_genes(self, term):
+        """Returns the set of genes annotated by a term."""
+        return self._annotations_dict[term]
 
 
     def get_coannotated_interactions(self, term1, term2):
@@ -723,6 +755,32 @@ class AnnotatedInteractionsGraph(object):
 
         """
         return self._intraterm_interactions[term]
+
+
+    def get_active_genes(self, cutoff, greater=True):
+        """Returns a `set` of all "active" genes: those for which
+        pass a cutoff for differential gene expression.
+
+        :Parameters:
+        - `cutoff`: a numerical threshold value for determining whether
+          a gene is active or not
+        - `greater`: if `True`, consider a gene "active" if its
+          differential expression value is greater than or equal to the
+          `cutoff`; if `False`, consider a gene "active" if its value is
+          less than or equal to the `cutoff`.
+
+        """
+        if greater:
+            active_genes = set(gene for gene, vals in
+                    self._interactions_graph.node.items() if
+                    vals['weight'] >= cutoff
+            )
+        else:
+            active_genes = set(gene for gene, vals in
+                    self._interactions_graph.node.items() if
+                    vals['weight'] <= cutoff
+            )
+        return active_genes
 
 
     def get_active_interactions(self, cutoff, greater=True):
