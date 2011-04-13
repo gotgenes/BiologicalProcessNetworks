@@ -128,20 +128,22 @@ def calculate_overlap_scores(gene_set1, gene_set2,
             'intersection': ...,
             'union': ...,
             'jaccard': ...,
-            'fisher': ...
+            'fishers_exact': ...
         }`
-    Here, `'fisher'` represents the result of Fisher's Exact Test, a
-    floating point probability between 0 and 1, inclusive; `'jaccard'`
-    represents the Jaccard Index, also a floating point value
-    between 0 and 1, inclusive. The set sizes are self-explanatory.
-    `'intersection'` and `'union'` represent the size of the
-    intersection and union, respectively, of the two sets.
+
+    Here, ``'fishers_exact'`` represents the result of Fisher's Exact
+    Test, a floating point probability between 0 and 1, inclusive;
+    `'jaccard'` represents the Jaccard Index, also a floating point
+    value between 0 and 1, inclusive. The set sizes are
+    self-explanatory.  `'intersection'` and `'union'` represent the size
+    of the intersection and union, respectively, of the two sets.
 
     :Parameters:
     - `gene_set1`: `set` or `frozenset` instance of gene names
     - `gene_set2`: `set` or `frozenset` instance of gene names
     - `num_total_genes`: should be the total number of genes in the
       "universe" of the gene sets
+
     """
     try:
         fisher
@@ -169,7 +171,7 @@ def calculate_overlap_scores(gene_set1, gene_set2,
     assert num_not_1_not_2 >= 0
     fisher_pvalues = fisher.pvalue(num_1_and_2, num_1_not_2, num_2_not_1,
             num_not_1_not_2)
-    scores['p_value'] = fisher_pvalues.right_tail
+    scores['fishers_exact'] = fisher_pvalues.right_tail
 
     union_size = len(gene_set1.union(gene_set2))
     scores['intersection'] = num_1_and_2
