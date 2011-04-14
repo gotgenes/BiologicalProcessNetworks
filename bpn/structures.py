@@ -831,6 +831,8 @@ class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
                 self._annotations_to_interactions.keys(),
                 self._annotations_to_interactions.values()
         )
+        self._links_indices = dict((l, i) for (i, l) in
+                enumerate(self._links))
         # Delete the dictionary mapping since we will not use it
         # hereafter.
         del self._annotations_to_interactions
@@ -856,14 +858,32 @@ class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
         return self._num_annotation_pairs
 
 
-    def get_link(self, link_index):
-        """Returns the link at the given index.
+    def get_termed_link(self, link_index):
+        """Returns a link with the actual annotation terms.
 
         :Parameters:
         - `link_index`: the index of the link of interest
 
         """
         return self._links[link_index]
+
+
+    def get_link_index(self, term1, term2):
+        """Returns the two-dimensional index of the link specified by
+        the two terms.
+
+        :Parameters:
+        - `term1`: an annotation term
+        - `term2`: an annotation term
+
+        """
+        if term1 == term2:
+            raise ValueError("Terms can not be the same.")
+        elif term1 > term2:
+            term1, term2 = term2, term1
+        # TODO: Should we check to see if the pair of terms actually
+        # co-annotate any interactions?
+        return self._links_indices[(term1, term2)]
 
 
     def get_coannotated_interactions(self, link_index):
@@ -935,17 +955,56 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
         del self._annotations_to_interactions
 
 
+    def get_term_index(self, term):
+        """Returns the index of a single named term.
+
+        :Parameters:
+        - `term`: an annotation term
+
+        """
+        return self._terms_to_indices[term]
+
+
+    def get_term_from_index(self, term_index):
+        """Returns the name of a term at a particular index.
+
+        :Parameters:
+        - `term_index`: index of the term of interest
+
+        """
+        return self._annotation_terms[term_index]
+
+
     def get_termed_link(self, link_index):
         """Returns a link with the actual annotation terms instead of
         term indices.
 
         :Parameters:
-        - `link_index`: the index of the link of interest
+        - `link_index`: the two-dimensional index of the link of
+          interest
 
         """
-        termed_link = (self._annotation_terms[link_index[0]],
-                self._annotation_terms[link_index[1]])
+        termed_link = (self.get_term_from_index(link_index[0]),
+                self.get_term_from_index(link_index[1]))
         return termed_link
+
+
+    def get_link_index(self, term1, term2):
+        """Returns the two-dimensional index of the link specified by
+        the two terms.
+
+        :Parameters:
+        - `term1`: an annotation term
+        - `term2`: an annotation term
+
+        """
+        if term1 == term2:
+            raise ValueError("Terms can not be the same.")
+        elif term1 > term2:
+            term1, term2 = term2, term1
+        # TODO: Should we check to see if the pair of terms actually
+        # co-annotate any interactions?
+        return (self.get_term_index(term1), self.get_term_index(term2))
 
 
     def get_coannotated_interactions(self, link_index):
