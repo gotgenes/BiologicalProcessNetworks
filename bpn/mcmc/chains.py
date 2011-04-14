@@ -39,7 +39,7 @@ class PLNMarkovChain(MarkovChain):
             transition_ratio,
             num_steps=NUM_STEPS,
             burn_in=BURN_IN,
-            selected_links=None,
+            seed_links=None,
             alpha=None,
             beta=None,
             link_prior=None,
@@ -59,7 +59,7 @@ class PLNMarkovChain(MarkovChain):
         - `burn_in`: the number of steps to take before recording state
           information about the Markov chain (state records are
           discarded until complete)
-        - `selected_links`: a user-defined seed of links to start as
+        - `seed_links`: a user-defined seed of links to start as
           selected
         - `alpha`: the false-positive rate; see `PLNParametersState` for
           more information
@@ -78,7 +78,7 @@ class PLNMarkovChain(MarkovChain):
                 annotated_interactions,
                 active_gene_threshold,
                 transition_ratio,
-                selected_links,
+                seed_links,
                 alpha,
                 beta,
                 link_prior,
@@ -207,7 +207,7 @@ class ArrayMarkovChain(PLNMarkovChain):
             transition_ratio,
             num_steps=NUM_STEPS,
             burn_in=BURN_IN,
-            selected_links_indices=None,
+            seed_links_indices=None,
             alpha=None,
             beta=None,
             link_prior=None,
@@ -228,7 +228,7 @@ class ArrayMarkovChain(PLNMarkovChain):
         - `burn_in`: the number of steps to take before recording state
           information about the Markov chain (state records are
           discarded until complete)
-        - `selected_links_indices`: a user-defined seed of indices to
+        - `seed_links_indices`: a user-defined seed of indices to
           links to start as selected
         - `alpha`: the false-positive rate; see `PLNParametersState` for
           more information
@@ -249,7 +249,7 @@ class ArrayMarkovChain(PLNMarkovChain):
                 annotated_interactions,
                 active_gene_threshold,
                 transition_ratio,
-                selected_links_indices,
+                seed_links_indices,
                 alpha,
                 beta,
                 link_prior,
@@ -278,7 +278,7 @@ class TermsBasedMarkovChain(ArrayMarkovChain):
             transition_ratio,
             num_steps=NUM_STEPS,
             burn_in=BURN_IN,
-            selected_links_indices=None,
+            seed_links_indices=None,
             alpha=None,
             beta=None,
             link_prior=None,
@@ -300,7 +300,7 @@ class TermsBasedMarkovChain(ArrayMarkovChain):
         - `burn_in`: the number of steps to take before recording state
           information about the Markov chain (state records are
           discarded until complete)
-        - `selected_links_indices`: a user-defined seed of indices to
+        - `seed_links_indices`: a user-defined seed of indices to
           links to start as selected
         - `alpha`: the false-positive rate; see `PLNParametersState` for
           more information
@@ -324,7 +324,7 @@ class TermsBasedMarkovChain(ArrayMarkovChain):
                 annotated_interactions,
                 active_gene_threshold,
                 transition_ratio,
-                selected_links_indices,
+                seed_links_indices,
                 alpha=alpha,
                 beta=beta,
                 link_prior=link_prior,

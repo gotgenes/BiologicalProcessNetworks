@@ -368,6 +368,7 @@ class McmcInputData(BplnInputData):
             burn_in,
             steps,
             activity_threshold,
+            seed_links,
             free_parameters,
             disable_swaps,
             terms_based,
@@ -393,6 +394,8 @@ class McmcInputData(BplnInputData):
         - `steps`: the number of steps to record
         - `activity_threshold`: the threshold at which a gene is
           declared active
+        - `seed_links`: an iterable of annotation pairs to use as a seed
+          when initializing the Markov chain.
         - `free_parameters`: `True` if parameters are free take a random
           value from their distribution, `False` if they may only take
           adjoining values
@@ -426,6 +429,7 @@ class McmcInputData(BplnInputData):
         self.burn_in = burn_in
         self.steps = steps
         self.activity_threshold = activity_threshold
+        self.seed_links = seed_links
         self.free_parameters = free_parameters
         self.disable_swaps = disable_swaps
         self.terms_based = terms_based

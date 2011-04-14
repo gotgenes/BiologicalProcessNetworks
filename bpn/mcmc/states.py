@@ -590,7 +590,7 @@ class PLNLinksState(State):
     def __init__(
             self,
             process_links,
-            selected_links,
+            seed_links,
             annotated_interactions,
             active_interactions
         ):
@@ -599,7 +599,7 @@ class PLNLinksState(State):
         :Parameters:
         - `process_links`: the set of all possible links between
           biological processes
-        - `selected_links`: the subset of links being considered as
+        - `seed_links`: the subset of links being considered as
           "selected" initially in the process linkage network
         - `annotated_interactions`: an `AnnotatedInteractionsGraph`
           instance
@@ -641,7 +641,7 @@ class PLNLinksState(State):
         # Now get the appropriate tallies for the selected interactions
         self.unselected_links = set(self.process_links)
         self.selected_links = set()
-        for annotation1, annotation2 in selected_links:
+        for annotation1, annotation2 in seed_links:
             self.select_link(annotation1, annotation2)
         # We need to return the delta to None
         self._delta = None
@@ -956,7 +956,7 @@ class ArrayLinksState(PLNLinksState):
     def __init__(
             self,
             annotated_interactions,
-            selected_links_indices,
+            seed_links_indices,
             active_interactions
         ):
         """Create a new ArrayLinksState instance
@@ -964,7 +964,7 @@ class ArrayLinksState(PLNLinksState):
         :Parameters:
         - `annotated_interactions`: an `AnnotatedInteractionsArray`
           instance
-        - `selected_links_indices`: indices for the subset of links
+        - `seed_links_indices`: indices for the subset of links
           being considered as "selected" initially in the process
           linkage network
         - `active_interactions`: a set of interactions that are
@@ -984,7 +984,7 @@ class ArrayLinksState(PLNLinksState):
         # represented by that index has been selected, or `False` if the
         # link is unselected.
         self.link_selections = numpy.zeros(self._num_links, numpy.bool)
-        for index in selected_links_indices:
+        for index in seed_links_indices:
             self.select_link(index)
         self._delta = None
 
@@ -1216,7 +1216,7 @@ class TermsAndLinksState(NoSwapArrayLinksState):
     def __init__(
             self,
             annotated_interactions,
-            selected_links_indices,
+            seed_links_indices,
             active_interactions
         ):
         """Create a new ArrayLinksState instance
@@ -1224,7 +1224,7 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         :Parameters:
         - `annotated_interactions`: an `AnnotatedInteractions2dArray`
           instance
-        - `selected_links_indices`: indices for the subset of links
+        - `seed_links_indices`: indices for the subset of links
           being considered as "selected" initially in the process
           linkage network
         - `active_interactions`: a set of interactions that are
@@ -1252,8 +1252,8 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         # value indicates the term is selected.
         self._term_selections = numpy.zeros(self._num_terms, int)
 
-        if selected_links_indices:
-            for index in selected_links_indices:
+        if seed_links_indices:
+            for index in seed_links_indices:
                 self.select_link(index)
         else:
             # We have to have at least one link selected.
@@ -1442,7 +1442,7 @@ class IntraTermsAndLinksState(TermsAndLinksState):
     def __init__(
             self,
             annotated_interactions,
-            selected_links_indices,
+            seed_links_indices,
             active_interactions
         ):
         """Create a new ArrayLinksState instance
@@ -1450,7 +1450,7 @@ class IntraTermsAndLinksState(TermsAndLinksState):
         :Parameters:
         - `annotated_interactions`: an `IntratermInteractions2dArray`
           instance
-        - `selected_links_indices`: indices for the subset of links
+        - `seed_links_indices`: indices for the subset of links
           being considered as "selected" initially in the process
           linkage network
         - `active_interactions`: a set of interactions that are
@@ -1459,7 +1459,7 @@ class IntraTermsAndLinksState(TermsAndLinksState):
         """
         super(IntraTermsAndLinksState, self).__init__(
                 annotated_interactions,
-                selected_links_indices,
+                seed_links_indices,
                 active_interactions
         )
 
@@ -1507,7 +1507,7 @@ class PLNOverallState(State):
             annotated_interactions,
             active_gene_threshold,
             transition_ratio,
-            selected_links=None,
+            seed_links=None,
             alpha=None,
             beta=None,
             link_prior=None,
@@ -1522,7 +1522,7 @@ class PLNOverallState(State):
           gene is considered "active"
         - `transition_ratio`: a `float` indicating the ratio of link
           transitions to parameter transitions
-        - `selected_links`: a user-defined seed of links to start as
+        - `seed_links`: a user-defined seed of links to start as
           selected
         - `alpha`: the false-positive rate; see `PLNParametersState` for
           more information
@@ -1537,10 +1537,10 @@ class PLNOverallState(State):
         process_links = annotated_interactions.get_all_links()
         # Choose some sample of the process links to be selected
         # initially, if none have been provided
-        if selected_links is None:
+        if seed_links is None:
             # NOTE: It's important process_links be a list for this step,
             # because random.sample doesn't work on sets
-            selected_links = random.sample(process_links,
+            seed_links = random.sample(process_links,
                     random.randint(0, len(process_links)))
         # We need to convert process links into a set, now.
         process_links = frozenset(process_links)
@@ -1552,7 +1552,7 @@ class PLNOverallState(State):
         )
         self.links_state = PLNLinksState(
                 process_links,
-                selected_links,
+                seed_links,
                 annotated_interactions,
                 active_interactions
         )
@@ -1681,7 +1681,7 @@ class ArrayOverallState(PLNOverallState):
             annotated_interactions,
             active_gene_threshold,
             transition_ratio,
-            selected_links_indices=None,
+            seed_links_indices=None,
             alpha=None,
             beta=None,
             link_prior=None,
@@ -1697,7 +1697,7 @@ class ArrayOverallState(PLNOverallState):
           gene is considered "active"
         - `transition_ratio`: a `float` indicating the ratio of link
           transitions to parameter transitions
-        - `selected_links_indices`: a user-defined seed of indices to
+        - `seed_links_indices`: a user-defined seed of indices to
           links to start as selected
         - `alpha`: the false-positive rate; see `PLNParametersState` for
           more information
@@ -1712,10 +1712,10 @@ class ArrayOverallState(PLNOverallState):
 
         """
         num_process_links = annotated_interactions.calc_num_links()
-        if selected_links_indices is None:
+        if seed_links_indices is None:
             # Note that we're randomly selecting a random number of
             # indices here.
-            selected_links_indices = random.sample(
+            seed_links_indices = random.sample(
                     xrange(num_process_links),
                     random.randint(0, num_process_links)
             )
@@ -1727,7 +1727,7 @@ class ArrayOverallState(PLNOverallState):
         )
         self.links_state = links_state_class(
                 annotated_interactions,
-                selected_links_indices,
+                seed_links_indices,
                 active_interactions
         )
         self.parameters_state = parameters_state_class(
@@ -1755,7 +1755,7 @@ class TermsBasedOverallState(ArrayOverallState):
             annotated_interactions,
             active_gene_threshold,
             transition_ratio,
-            selected_links_indices=None,
+            seed_links_indices=None,
             alpha=None,
             beta=None,
             link_prior=None,
@@ -1772,7 +1772,7 @@ class TermsBasedOverallState(ArrayOverallState):
           gene is considered "active"
         - `transition_ratio`: a `float` indicating the ratio of link
           transitions to parameter transitions
-        - `selected_links_indices`: a user-defined seed of indices to
+        - `seed_links_indices`: a user-defined seed of indices to
           links to start as selected
         - `alpha`: the false-positive rate; see `PLNParametersState` for
           more information
@@ -1794,8 +1794,8 @@ class TermsBasedOverallState(ArrayOverallState):
         num_process_links = annotated_interactions.calc_num_links()
         num_terms = annotated_interactions.calc_num_terms()
 
-        if selected_links_indices is None:
-            selected_links_indices = random.sample(
+        if seed_links_indices is None:
+            seed_links_indices = random.sample(
                     annotated_interactions.get_all_links(),
                     random.randrange(num_process_links)
             )
@@ -1808,7 +1808,7 @@ class TermsBasedOverallState(ArrayOverallState):
         )
         self.links_state = links_state_class(
                 annotated_interactions,
-                selected_links_indices,
+                seed_links_indices,
                 active_interactions
         )
         self.parameters_state = parameters_state_class(

@@ -103,11 +103,20 @@ def main(argv=None):
     check_link_components(annotated_interactions)
 
     logger.info("Constructing the Markov chain.")
+
+    # Present the seed_links as indices.
+    if input_data.seed_links:
+        seed_links = [annotated_interactions.get_link_index(*link)
+                for link in input_data.seed_links]
+    else:
+        seed_links = None
+
     if input_data.free_parameters:
         logger.info("Using free parameter transitions.")
         parameters_state_class = states.RandomTransitionParametersState
     else:
         parameters_state_class = states.PLNParametersState
+
     if input_data.terms_based:
         logger.info("Using terms-based model.")
         if input_data.detailed_transitions:
@@ -135,7 +144,8 @@ def main(argv=None):
                 num_steps=input_data.steps,
                 burn_in=input_data.burn_in,
                 state_recorder_class=state_recorder_class,
-                links_state_class=links_state_class
+                links_state_class=links_state_class,
+                seed_links_indices=seed_links
         )
     else:
         if input_data.disable_swaps:
@@ -164,7 +174,8 @@ def main(argv=None):
                 burn_in=input_data.burn_in,
                 state_recorder_class=state_recorder_class,
                 parameters_state_class=parameters_state_class,
-                links_state_class=links_state_class
+                links_state_class=links_state_class,
+                seed_links_indices=seed_links
         )
 
     logger.info("Beginning to run through states in the chain. This "

@@ -296,6 +296,18 @@ class McmcArgParser(ExpressionBasedArgParser):
                     "which a gene is considered active [default: "
                     "%default=-log10(0.05)]")
         )
+        self.cli_parser.add_option('--transition-ratio', type='float',
+                default=0.9,
+                help=("The target ratio of proposed link transitions "
+                    "to proposed parameter transitions [default: "
+                    "%default]"
+                )
+        )
+        self.cli_parser.add_option('--seed-links',
+                help=("A two-column CSV-formatted file containing "
+                    "pairs of terms to use as seed for links when "
+                    "initializing the Markov chain.")
+        )
         self.cli_parser.add_option('--free-parameters',
                 action='store_true',
                 help=("parameters will be adjusted randomly, rather "
@@ -313,13 +325,6 @@ class McmcArgParser(ExpressionBasedArgParser):
                 help=("consider also intraterm interactions [NOTE: ",
                     "only available in conjunction with "
                     "'--terms-based']")
-        )
-        self.cli_parser.add_option('--transition-ratio', type='float',
-                default=0.9,
-                help=("The target ratio of proposed link transitions "
-                    "to proposed parameter transitions [default: "
-                    "%default]"
-                )
         )
         self.cli_parser.add_option('--parameters-outfile',
                 default=mcmc.defaults.PARAMETERS_OUTFILE,
@@ -339,6 +344,7 @@ class McmcArgParser(ExpressionBasedArgParser):
         self.cli_parser.add_option('--bzip2', action='store_true',
                 help="compress transitions file using bzip2"
         )
+
 
 class SaArgParser(ExpressionBasedArgParser):
     """Command line parser for SA BPLN."""
@@ -682,6 +688,19 @@ class McmcCli(ContextualCli):
         self.cli_parser = McmcArgParser()
 
 
+    def _process_input_files(self):
+        super(McmcCli, self)._process_input_files()
+        if self.opts.seed_links:
+            logger.info("Parsing seed links from {0}.".format(
+                    self.opts.seed_links))
+            seed_links_file = open(self.opts.seed_links, 'rb')
+            seed_links = [tuple(sorted(link)) for link in
+                    parsers.parse_selected_links_file(seed_links_file)]
+            self.seed_links = seed_links
+        else:
+            self.seed_links = None
+
+
     def _open_output_files(self):
         super(McmcCli, self)._open_output_files()
         self.parameters_outfile = open(self.opts.parameters_outfile,
@@ -711,6 +730,7 @@ class McmcCli(ContextualCli):
                 burn_in=self.opts.burn_in,
                 steps=self.opts.steps,
                 activity_threshold=self.opts.activity_threshold,
+                seed_links=self.seed_links,
                 free_parameters=self.opts.free_parameters,
                 disable_swaps=self.opts.disable_swaps,
                 terms_based=self.opts.terms_based,
@@ -766,3 +786,4 @@ class SaCli(ContextualCli):
                 detailed_transitions=self.opts.detailed_transitions
         )
         return data
+
