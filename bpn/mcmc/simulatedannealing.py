@@ -9,7 +9,6 @@
 
 """Simulated Annealing for BPN."""
 
-
 import math
 import random
 import states
@@ -82,7 +81,7 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
                 self.current_state.parameters_state.get_parameter_distributions()
         )
         self.num_steps = num_steps
-        self.temperature = 1.0
+        self.temperature = 100000
         self.step_size = (1.0/self.num_steps)
 
 
@@ -94,10 +93,11 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
         likelihood of the proposed state to the likelihood of the
         current state as a (log of the) ratio of the two likelihoods.
 
-        If this ratio is greater than 0 or the current temperature is
-		greater then a random value from 0 to 1, then we accept the 
-		proposed state and transition to it. Otherwise we reject the 
-		proposed state and continue with the current state.
+        If this ratio is greater than 0 or e ^ -deltaE / temperature
+	is better then a random value from 0 to 1, then we accept the
+	proposed state. Therefore, when the temperature is very
+	large we are more likely to accept a worse state. Else we
+	don't accept the new state.
 
         """
         proposed_state = self.current_state.create_new_state()
@@ -110,7 +110,7 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
                 current_log_likelihood
 
         # Is the new solution better?
-        if delta_e_log > 0 or self.temperature > random.random():
+        if delta_e_log > 0 or math.exp(-delta_e_log/self.temperature) > random.random():
             print "Accepted new state"
             self.current_state = proposed_state
             logger.debug("Accepted proposed state.")
@@ -125,12 +125,22 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
 
 
     def run(self):
-        """Anneal for num_steps.
+        """Anneal.
+
+	Temperature degrades by a percentage rather then a 
+        specific step size. This allows the temperature
+	to gradually cool off and resembles more of a 
+	real cooling down. We use 1 - stepsize to allow
+	the user to still input the number of steps.
+	While the number of steps does not directly correlate
+	to how many steps will be annealed, the number of 
+	states visited is still directly tied to the step
+	size.
 
         """
-        while self.temperature > 0:
-            self.next_state()
-            self.temperature -= self.step_size
+        while self.temperature > 0.1:
+	    self.next_state()
+            self.temperature *= (1-self.step_size)
 
 class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
     """Similar to `PLNSimulatedAnnealing`, but using `numpy` 
@@ -190,5 +200,5 @@ class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
         )
         self.num_steps = num_steps
         self.last_transition_info = None
-        self.temperature = 1.0
+        self.temperature = 100000
         self.step_size = 1.0/self.num_steps
