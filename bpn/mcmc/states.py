@@ -1242,18 +1242,29 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         self._num_selected_active_interactions = 0
 
         # link_selections is a 2-dimensional symmetric array of boolean
-        # data type, where the value at each index is `True` if the link
+        # data type, where the value at an index is `True` if the link
         # represented by that index has been selected, or `False` if the
         # link is not selected.
         self.link_selections = bpn.structures.symzeros(self._num_terms,
                 bool)
 
-        # _term_selections is an array of integers, where a positive
-        # value indicates the term is selected.
-        self._term_selections = numpy.zeros(self._num_terms, int)
+        # _term_links_counts is an array of integers, where a positive
+        # value indicates the number of selected links in which that
+        # term participates.
+        self._term_links_counts = numpy.zeros(self._num_terms, int)
+
+        # term_selections is an array of boolean data type, where the
+        # value at an index is `True` if the term represented by that
+        # index has been selected, or `False` otherwise.
+        self.term_selections = numpy.zeros(self._num_terms, bool)
 
         if seed_links_indices:
             for index in seed_links_indices:
+                # Make sure at least one of the terms is selected before
+                # attempting to select the link, so we don't raise an
+                # error.
+                if not self.term_selections[index[0]]:
+                    self.select_term(index[0])
                 self.select_link(index)
         else:
             # We have to have at least one link selected.
@@ -1268,6 +1279,7 @@ class TermsAndLinksState(NoSwapArrayLinksState):
                         self._annotated_interactions.get_coannotated_interactions(
                             (random_term1, random_term2))
                 )
+            self.select_term(random_term1)
             self.select_link((random_term1, random_term2))
 
         self._delta = None
@@ -1276,10 +1288,11 @@ class TermsAndLinksState(NoSwapArrayLinksState):
     def copy(self):
         """Create a copy of this state instance."""
         newcopy = copy.copy(self)
-        newcopy._term_selections = self._term_selections.copy()
+        newcopy._terms_links_counts = self._terms_links_counts.copy()
+        newcopy.term_selections = self.term_selections.copy()
         newcopy.link_selections = self.link_selections.copy()
-        newcopy._interaction_selection_counts = \
-                self._interaction_selection_counts.copy()
+        newcopy._interaction_selection_counts = (
+                self._interaction_selection_counts.copy())
         return newcopy
 
 
@@ -1340,16 +1353,38 @@ class TermsAndLinksState(NoSwapArrayLinksState):
 
     def select_term(self, term):
         """Mark a term as selected (again)."""
-        if not self._term_selections[term]:
-            self._num_selected_terms += 1
-        self._term_selections[term] += 1
+        if self.term_selections[term]:
+            raise ValueError(
+                    "Term {0} has already been selected!".format(term))
+        self.term_selections[term] = True
+        self._num_selected_terms += 1
 
 
     def unselect_term(self, term):
         """Unmark a term as selected (again)."""
-        self._term_selections[term] -= 1
-        if not self._term_selections[term]:
-            self._num_selected_terms -= 1
+        if not self.term_selections[term]:
+            raise ValueError(
+                    "Term {0} has already been unselected!".format(term))
+        self._num_selected_terms -= 1
+        self.term_selections[term] = False
+
+
+    def _select_terms_via_link(self, link):
+        for term in link:
+            # Increment the link count for each term.
+            self._term_links_counts[term] += 1
+            # Mark the term as selected.
+            if not self.term_selections[term]:
+                self.select_term(term)
+
+
+    def _unselect_terms_via_link(self, link):
+        for term in link:
+            # Decrement the link count.
+            self._term_links_counts[term] -= 1
+            # Unselect the term if it's no longer part of any links.
+            if not self._term_links_counts[term]:
+                self.unselect_term(term)
 
 
     def select_link(self, index):
@@ -1360,9 +1395,18 @@ class TermsAndLinksState(NoSwapArrayLinksState):
           selected
 
         """
+        term1_index, term2_index = index
+        # Check to make sure that at least one of the two terms has
+        # already been selected, since we only permit adding links which
+        # have at least one selected term.
+        if (not self.term_selections[term1_index]) and (not
+                self.term_selections[term1_index]):
+            raise ValueError(
+                    ("Can not select link {0}; neither term "
+                    "selected.").format(index)
+            )
         super(TermsAndLinksState, self).select_link(index)
-        self.select_term(index[0])
-        self.select_term(index[1])
+        self._select_terms_via_link(index)
 
 
     def unselect_link(self, index):
@@ -1374,8 +1418,7 @@ class TermsAndLinksState(NoSwapArrayLinksState):
 
         """
         super(TermsAndLinksState, self).unselect_link(index)
-        self.unselect_term(index[0])
-        self.unselect_term(index[1])
+        self._unselect_terms_via_link(index)
 
 
     def _draw_random_valid_link(self):
@@ -1390,14 +1433,14 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         term1 = None
         term2 = None
         interactions = None
-        selected_terms = self._term_selections.nonzero()[0]
+        selected_terms = self.term_selections.nonzero()[0]
         while (term1 == term2) or (interactions is None):
             num_choices_discarded += 1
             # Select a term uniformly at random.
             term1 = random.randrange(self._num_terms)
             # Determine if that term is already in the set of selected
             # terms.
-            if self._term_selections[term1]:
+            if self.term_selections[term1]:
                 # The term is in the set of selected; choose another
                 # term uniformly at random from all other terms.
                 term2 = random.randrange(self._num_terms)
@@ -1445,7 +1488,7 @@ class IntraTermsAndLinksState(TermsAndLinksState):
             seed_links_indices,
             active_interactions
         ):
-        """Create a new ArrayLinksState instance
+        """Create a new IntraTermsAndLinksState instance
 
         :Parameters:
         - `annotated_interactions`: an `IntratermInteractions2dArray`
@@ -1464,41 +1507,161 @@ class IntraTermsAndLinksState(TermsAndLinksState):
         )
 
 
-    def select_link(self, index):
-        """Mark a link as selected.
+    def select_term(self, term):
+        """Mark a term as selected (again)."""
+        super(IntraTermsAndLinksState, self).select_term(term)
+        intraterm_interactions = (
+                self._annotated_interactions.get_intraterm_interactions(
+                    term)
+        )
+        if intraterm_interactions:
+            self._mark_interactions_selected(intraterm_interactions)
 
-        :Parameters:
-        - `index`: the 2-dimensional index of the link to mark as
-          selected
+
+    def unselect_term(self, term):
+        """Unmark a term as selected (again)."""
+        super(IntraTermsAndLinksState, self).unselect_term(term)
+        intraterm_interactions = (
+                self._annotated_interactions.get_intraterm_interactions(
+                    term)
+        )
+        if intraterm_interactions:
+            self._mark_interactions_unselected(
+                    intraterm_interactions)
+
+
+class SelectableTermsAndLinksState(IntraTermsAndLinksState):
+    """Similar to `IntraTermsAndLinksState`, but allowing terms to be
+    selected/unselected independent from link selection/unselection.
+
+    """
+    def _unselect_terms_via_link(self, link):
+        for term in link:
+            # Decrement the link count.
+            self._term_links_counts[term] -= 1
+            assert self._term_links_counts[term] >= 0, ("Term {0} "
+                    "reached a negative links count!").format(term)
+            # Note that we do not unselect the term here, even if its
+            # links count reaches 0.
+
+
+    def _calc_num_terms_based_transitions(self):
+        num_selected_terms = self._num_selected_terms
+        # Figure out the number of terms which are selected, but
+        # participate in no selected links. These are the terms which
+        # can be unselected.
+        num_selected_terms_with_links = len(
+                self._term_links_counts.nonzero()[0])
+        num_selected_terms_without_links = (num_selected_terms -
+                num_selected_terms_with_links)
+        # Next figure out the number of terms which are not selected;
+        # these are the terms which can be selected.
+        num_unselected_terms = self._num_terms - num_selected_terms
+        # The total number of terms-based transitions is the sum of
+        # those which can be unselected plus those which can be
+        # selected.
+        num_terms_based_transitions = (num_selected_terms_without_links
+                + num_unselected_terms)
+        return num_terms_based_transitions
+
+
+    def _calc_num_links_based_transitions(self):
+        # Here we consider the total number of possible links. Some of
+        # those will be selected already, but most will not. The concept
+        # is that, regardless of a link's actual selection state, a
+        # potential links adds one and only one possible transition:
+        # selection if unselected, or unselection if selected.
+        num_selected_terms = self._num_selected_terms
+        num_unselected_terms = (self._num_terms -
+                self._num_selected_terms)
+        num_possible_links_between_selected_terms = scipy.comb(
+                _num_selected_terms, 2)
+        num_possible_links_from_selected_terms_to_unselected_terms = (
+                _num_selected_terms * _num_unselected_terms)
+        num_links_based_transitions = (
+                num_possible_links_between_selected_terms +
+                num_possible_links_from_selected_terms_to_unselected_terms
+        )
+        return num_links_based_transitions
+
+
+    def _calc_transition_ratio(self):
+        """Calculates and returns the ratio which determines
+        whether to attempt a term-based or link-based transition.
+
+        Returns a floating point value between 0 and 1 representing the
+        ratio of selecting a term-based transition versus a links-based
+        transition.
 
         """
-        super(IntraTermsAndLinksState, self).select_link(index)
-        for term_index in index:
-            intraterm_interactions = (
-                    self._annotated_interactions.get_intraterm_interactions(
-                        term_index)
-            )
-            if intraterm_interactions:
-                self._mark_interactions_selected(intraterm_interactions)
+        num_terms_based_transitions = (
+                self._calc_num_terms_based_transitions())
+        num_links_based_transitions = (
+                self._calc_num_links_based_transitions())
+        total_transitions = (num_terms_based_transitions +
+                num_links_based_transitions)
+        ratio = float(num_terms_based_transitions) / total_transitions
+        return ratio
 
 
-    def unselect_link(self, index):
-        """Mark a link as unselected.
+    def _propose_random_term_transition(self):
+        term_index = random.randrange(self._num_terms)
+        if not self.term_selections[term_index]:
+            return ('term_selection', term_index)
+        elif not self._term_links_counts[term_index]:
+            return ('term_unselection', term_index)
+        else:
+            return None
 
-        :Parameters:
-        - `index`: the 2-dimensional index of the link to mark as
-          unselected
 
-        """
-        super(IntraTermsAndLinksState, self).unselect_link(index)
-        for term_index in index:
-            intraterm_interactions = (
-                    self._annotated_interactions.get_intraterm_interactions(
-                        term_index)
-            )
-            if intraterm_interactions:
-                self._mark_interactions_unselected(
-                        intraterm_interactions)
+    def _propose_random_link_transition(self):
+        term1_index = random.randrange(self._num_terms)
+        term2_index = term1_index
+        while term2_index == term1_index:
+            random.randrange(self._num_terms)
+        link_index = (term1_index, term2_index)
+        # Link can not be considered if neither term is selected.
+        if (not self.term_selections[term1_index] and not
+                self.term_selections[term2_index]):
+            return None
+        # Link can not be considered if it doesn't co-annotate any
+        # interactions.
+        elif (self.annotated_interactions.get_coannotated_interactions(
+            link_index) is None):
+            return None
+        # The link is valid and at least one term is already selected.
+        # If the link is selected, propose unselecting it.
+        elif self.link_selections[link_index]:
+            return ('link_unselection', link_index)
+        # Otherwise, propose selecting it.
+        else:
+            return ('link_selection', link_index)
+
+
+    def create_new_state(self):
+        """Creates a new state on the basis of this state instance."""
+        logger.debug("Creating a new links state.")
+        # First, get an identical copy of this state
+        new_state = self.copy()
+        # Calculate the ratio of terms-based transitions to link-based
+        # transitions.
+        transition_ratio = self._calc_transition_ratio()
+        transition = None
+        while transition is None:
+            transition_coin = random.random()
+            if transition_coin <= transition_ratio:
+                transition = self._propose_random_term_transition()
+            else:
+                transition = self._propose_random_link_transition()
+        if transition[0] == 'term_selection':
+            new_state.select_term(transition[1])
+        elif transition[0] == 'term_unselection':
+            new_state.unselect_term(transition[1])
+        elif transition[0] == 'link_selection':
+            new_state.select_link(transition[1])
+        else:
+            new_state.unselect_link(transition[1])
+        return new_state
 
 
 class PLNOverallState(State):
