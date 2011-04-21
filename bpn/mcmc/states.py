@@ -1375,7 +1375,7 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         """
         super(TermsAndLinksState, self).unselect_link(index)
         self.unselect_term(index[0])
-        self.unselect_term(index[0])
+        self.unselect_term(index[1])
 
 
     def _draw_random_valid_link(self):
