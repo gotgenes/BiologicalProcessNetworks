@@ -1533,7 +1533,7 @@ class IntraTermsAndLinksState(TermsAndLinksState):
                     intraterm_interactions)
 
 
-class SelectableTermsAndLinksState(IntraTermsAndLinksState):
+class IndependentTermsAndLinksState(IntraTermsAndLinksState):
     """Similar to `IntraTermsAndLinksState`, but allowing terms to be
     selected/unselected independent from link selection/unselection.
 
