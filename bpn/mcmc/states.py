@@ -1288,7 +1288,7 @@ class TermsAndLinksState(NoSwapArrayLinksState):
     def copy(self):
         """Create a copy of this state instance."""
         newcopy = copy.copy(self)
-        newcopy._terms_links_counts = self._terms_links_counts.copy()
+        newcopy._term_links_counts = self._term_links_counts.copy()
         newcopy.term_selections = self.term_selections.copy()
         newcopy.link_selections = self.link_selections.copy()
         newcopy._interaction_selection_counts = (
@@ -1400,7 +1400,7 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         # already been selected, since we only permit adding links which
         # have at least one selected term.
         if (not self.term_selections[term1_index]) and (not
-                self.term_selections[term1_index]):
+                self.term_selections[term2_index]):
             raise ValueError(
                     ("Can not select link {0}; neither term "
                     "selected.").format(index)
@@ -1575,9 +1575,9 @@ class SelectableTermsAndLinksState(IntraTermsAndLinksState):
         num_unselected_terms = (self._num_terms -
                 self._num_selected_terms)
         num_possible_links_between_selected_terms = scipy.comb(
-                _num_selected_terms, 2)
+                num_selected_terms, 2, True)
         num_possible_links_from_selected_terms_to_unselected_terms = (
-                _num_selected_terms * _num_unselected_terms)
+                num_selected_terms * num_unselected_terms)
         num_links_based_transitions = (
                 num_possible_links_between_selected_terms +
                 num_possible_links_from_selected_terms_to_unselected_terms
@@ -1618,7 +1618,7 @@ class SelectableTermsAndLinksState(IntraTermsAndLinksState):
         term1_index = random.randrange(self._num_terms)
         term2_index = term1_index
         while term2_index == term1_index:
-            random.randrange(self._num_terms)
+            term2_index = random.randrange(self._num_terms)
         link_index = (term1_index, term2_index)
         # Link can not be considered if neither term is selected.
         if (not self.term_selections[term1_index] and not
@@ -1626,7 +1626,7 @@ class SelectableTermsAndLinksState(IntraTermsAndLinksState):
             return None
         # Link can not be considered if it doesn't co-annotate any
         # interactions.
-        elif (self.annotated_interactions.get_coannotated_interactions(
+        elif (self._annotated_interactions.get_coannotated_interactions(
             link_index) is None):
             return None
         # The link is valid and at least one term is already selected.
@@ -1647,12 +1647,18 @@ class SelectableTermsAndLinksState(IntraTermsAndLinksState):
         # transitions.
         transition_ratio = self._calc_transition_ratio()
         transition = None
+        num_choices_discarded = -1
         while transition is None:
+            num_choices_discarded += 1
             transition_coin = random.random()
             if transition_coin <= transition_ratio:
                 transition = self._propose_random_term_transition()
             else:
                 transition = self._propose_random_link_transition()
+        if num_choices_discarded:
+            logger.debug("Discarded {0} choices.".format(
+                    num_choices_discarded))
+
         if transition[0] == 'term_selection':
             new_state.select_term(transition[1])
         elif transition[0] == 'term_unselection':
@@ -1661,6 +1667,7 @@ class SelectableTermsAndLinksState(IntraTermsAndLinksState):
             new_state.select_link(transition[1])
         else:
             new_state.unselect_link(transition[1])
+
         return new_state
 
 
