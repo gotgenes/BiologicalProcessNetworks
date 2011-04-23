@@ -283,7 +283,7 @@ class TermsBasedMarkovChain(ArrayMarkovChain):
             beta=None,
             link_prior=None,
             term_prior=None,
-            state_recorder_class=recorders.TermsStateRecorder,
+            state_recorder_class=recorders.TermsBasedStateRecorder,
             parameters_state_class=states.TermPriorParametersState,
             links_state_class=states.TermsAndLinksState
         ):
