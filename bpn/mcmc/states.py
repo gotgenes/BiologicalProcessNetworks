@@ -629,10 +629,11 @@ class PLNLinksState(State):
         # where the first item is a string describing the type of
         # transition, and the second item is the link or pair of links
         # used in the transition. Acceptable strings for first item are:
-        # 'selection', 'unselection', and 'swap'. For 'selection' and
-        # 'unselection', the second item is a tuple of (annotation1,
-        # annotation2); for 'swap', the second item is a tuple of links
-        # ((annotation1, annotation2), (annotation3, annotation4))
+        # 'link_selection', 'link_unselection', and 'link_swap'. For
+        # 'link_selection' and 'link_unselection', the second item is a
+        # tuple of (annotation1, annotation2); for 'link_swap', the
+        # second item is a tuple of links ((annotation1, annotation2),
+        # (annotation3, annotation4))
         #
         # If self._delta is None, it indicates this is an origin state
         # with no ancestor.
@@ -709,7 +710,7 @@ class PLNLinksState(State):
                     annotation1, annotation2))
         self._mark_interactions_selected(link_annotated_interactions)
         # Finally, we note in the delta this selection
-        self._delta = ('selection', (annotation1, annotation2))
+        self._delta = ('link_selection', (annotation1, annotation2))
 
 
     def _mark_interactions_unselected(self, interactions):
@@ -751,7 +752,7 @@ class PLNLinksState(State):
                     annotation1, annotation2))
         self._mark_interactions_unselected(link_annotated_interactions)
         # Finally, we note in the delta this unselection
-        self._delta = ('unselection', (annotation1, annotation2))
+        self._delta = ('link_unselection', (annotation1, annotation2))
 
 
     def swap_links(self, selected_link, unselected_link):
@@ -787,7 +788,7 @@ class PLNLinksState(State):
 
         self.select_link(unselected_annotation1, unselected_annotation2)
         self.unselect_link(selected_annotation1, selected_annotation2)
-        self._delta = ('swap', (selected_link, unselected_link))
+        self._delta = ('link_swap', (selected_link, unselected_link))
 
 
     def copy(self):
@@ -1006,7 +1007,7 @@ class ArrayLinksState(PLNLinksState):
                     index))
         self._mark_interactions_selected(link_annotated_interactions)
         # Finally, we note in the delta this selection
-        self._delta = ('selection', index)
+        self._delta = ('link_selection', index)
 
 
     def unselect_link(self, index):
@@ -1026,7 +1027,7 @@ class ArrayLinksState(PLNLinksState):
                     index))
         self._mark_interactions_unselected(link_annotated_interactions)
         # Finally, we note in the delta this unselection
-        self._delta = ('unselection', index)
+        self._delta = ('link_unselection', index)
 
 
     def swap_links(self, selected_link_index, unselected_link_index):
@@ -1048,7 +1049,7 @@ class ArrayLinksState(PLNLinksState):
 
         self.select_link(unselected_link_index)
         self.unselect_link(selected_link_index)
-        self._delta = ('swap', (selected_link_index,
+        self._delta = ('link_swap', (selected_link_index,
             unselected_link_index))
 
 
@@ -1358,6 +1359,7 @@ class TermsAndLinksState(NoSwapArrayLinksState):
                     "Term {0} has already been selected!".format(term))
         self.term_selections[term] = True
         self._num_selected_terms += 1
+        self._delta = ('term_selection', term)
 
 
     def unselect_term(self, term):
@@ -1367,6 +1369,7 @@ class TermsAndLinksState(NoSwapArrayLinksState):
                     "Term {0} has already been unselected!".format(term))
         self._num_selected_terms -= 1
         self.term_selections[term] = False
+        self._delta = ('term_unselection', term)
 
 
     def _select_terms_via_link(self, link):
@@ -1405,8 +1408,8 @@ class TermsAndLinksState(NoSwapArrayLinksState):
                     ("Can not select link {0}; neither term "
                     "selected.").format(index)
             )
-        super(TermsAndLinksState, self).select_link(index)
         self._select_terms_via_link(index)
+        super(TermsAndLinksState, self).select_link(index)
 
 
     def unselect_link(self, index):
@@ -1417,8 +1420,8 @@ class TermsAndLinksState(NoSwapArrayLinksState):
           unselected
 
         """
-        super(TermsAndLinksState, self).unselect_link(index)
         self._unselect_terms_via_link(index)
+        super(TermsAndLinksState, self).unselect_link(index)
 
 
     def _draw_random_valid_link(self):
