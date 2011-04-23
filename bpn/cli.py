@@ -326,9 +326,21 @@ class McmcArgParser(ExpressionBasedArgParser):
                     "only available in conjunction with "
                     "'--terms-based']")
         )
+        self.cli_parser.add_option('--independent-terms',
+                action='store_true',
+                help=("allow terms to be selected indpendently from "
+                    "links [NOTE: only available in conjunction with "
+                    "--terms-based']"
+                )
+        )
         self.cli_parser.add_option('--parameters-outfile',
                 default=mcmc.defaults.PARAMETERS_OUTFILE,
                 help=("the file to which the parameters results should "
+                    "be written [default: %default]")
+        )
+        self.cli_parser.add_option('--terms-outfile',
+                default=mcmc.defaults.TERMS_OUTFILE,
+                help=("the file to which the terms results should "
                     "be written [default: %default]")
         )
         self.cli_parser.add_option('--transitions-outfile',
@@ -400,6 +412,7 @@ class SaArgParser(ExpressionBasedArgParser):
         self.cli_parser.add_option('--bzip2', action='store_true',
                 help="compress transitions file using bzip2"
         )
+
 
 class BplnCli(object):
     """Command line interface for BPLN."""
@@ -703,6 +716,10 @@ class McmcCli(ContextualCli):
 
     def _open_output_files(self):
         super(McmcCli, self)._open_output_files()
+        if self.opts.terms_based:
+            self.terms_outfile = open(self.opts.terms_outfile, 'wb')
+        else:
+            self.terms_outfile = None
         self.parameters_outfile = open(self.opts.parameters_outfile,
                 'wb')
         if self.opts.bzip2:
@@ -735,13 +752,16 @@ class McmcCli(ContextualCli):
                 disable_swaps=self.opts.disable_swaps,
                 terms_based=self.opts.terms_based,
                 intraterms=self.opts.intraterms,
+                independent_terms=self.opts.independent_terms,
                 transition_ratio=self.opts.transition_ratio,
+                terms_outfile=self.terms_outfile,
                 links_outfile=self.links_outfile,
                 transitions_outfile=self.transitions_outfile,
                 parameters_outfile=self.parameters_outfile,
                 detailed_transitions=self.opts.detailed_transitions
         )
         return data
+
 
 class SaCli(ContextualCli):
     """Command line interface for SA BPLN."""

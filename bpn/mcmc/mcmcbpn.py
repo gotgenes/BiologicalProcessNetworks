@@ -29,7 +29,8 @@ from defaults import (
         PARAMETERS_FIELDNAMES,
         TRANSITIONS_FIELDNAMES,
         DETAILED_TRANSITIONS_FIELDNAMES,
-        DETAILED_TERMS_TRANSITIONS_FIELDNAMES
+        TERMS_BASED_TRANSITIONS_FIELDNAMES,
+        TERMS_FIELDNAMES
 )
 
 # Configure all the logging stuff
@@ -119,20 +120,15 @@ def main(argv=None):
 
     if input_data.terms_based:
         logger.info("Using terms-based model.")
-        if input_data.detailed_transitions:
-            logger.info("Recording extra information for each state.")
-            state_recorder_class = recorders.DetailedTermsStateRecorder
-            transitions_csvfile = convutils.make_csv_dict_writer(
-                    input_data.transitions_outfile,
-                    DETAILED_TERMS_TRANSITIONS_FIELDNAMES
-            )
-        else:
-            state_recorder_class = recorders.TermsStateRecorder
-            transitions_csvfile = convutils.make_csv_dict_writer(
-                    input_data.transitions_outfile,
-                    TRANSITIONS_FIELDNAMES
-            )
-        if input_data.intraterms:
+        state_recorder_class = recorders.TermsBasedStateRecorder
+        transitions_csvfile = convutils.make_csv_dict_writer(
+                input_data.transitions_outfile,
+                TERMS_BASED_TRANSITIONS_FIELDNAMES
+        )
+        if input_data.independent_terms:
+            logger.info("Using independent-terms model.")
+            links_state_class = states.IndependentTermsAndLinksState
+        elif input_data.intraterms:
             logger.info("Considering intra-term interactions.")
             links_state_class = states.IntraTermsAndLinksState
         else:
@@ -183,22 +179,29 @@ def main(argv=None):
     markov_chain.run()
     logger.info("Run completed.")
 
-    logger.info("Writing link results to %s" %
-            input_data.links_outfile.name)
+    logger.info("Writing link results to {0}".format(
+            input_data.links_outfile.name))
     links_out_csvwriter = convutils.make_csv_dict_writer(
             input_data.links_outfile, LINKS_FIELDNAMES)
     markov_chain.state_recorder.write_links_probabilities(
             links_out_csvwriter)
-    logger.info("Writing parameter results to %s" % (
+    logger.info("Writing parameter results to {0}".format(
             input_data.parameters_outfile.name))
     parameters_out_csvwriter = convutils.make_csv_dict_writer(
             input_data.parameters_outfile, PARAMETERS_FIELDNAMES)
     markov_chain.state_recorder.write_parameters_probabilities(
             parameters_out_csvwriter)
-    logger.info("Writing transitions data to %s." % (
+    logger.info("Writing transitions data to {0}.".format(
             input_data.transitions_outfile.name))
     markov_chain.state_recorder.write_transition_states(
             transitions_csvfile)
+    if input_data.terms_based:
+        logger.info("Writing terms data to {0}.".format(
+            input_data.terms_outfile.name))
+        terms_out_csvwriter = convutils.make_csv_dict_writer(
+                input_data.terms_outfile, TERMS_FIELDNAMES)
+        markov_chain.state_recorder.write_terms_probabilities(
+                terms_out_csvwriter)
     logger.info("Finished.")
 
 

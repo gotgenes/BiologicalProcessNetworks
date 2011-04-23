@@ -373,7 +373,9 @@ class McmcInputData(BplnInputData):
             disable_swaps,
             terms_based,
             intraterms,
+            independent_terms,
             transition_ratio,
+            terms_outfile,
             links_outfile,
             parameters_outfile,
             transitions_outfile,
@@ -403,9 +405,12 @@ class McmcInputData(BplnInputData):
           disabled, `False` otherwise.
         - `terms_based`: `True` if terms-based model is to be used,
           `False` otherwise
+        - `independent_terms`: `True` if selectable-terms based model is
+          to be used, `False` otherwise
         - `intraterms`: consider also intraterm interactions
         - `transition_ratio`: a `float` indicating the ratio of link
           transitions to parameter transitions
+        - `terms_outfile`: file for output of terms results
         - `links_outfile`: file for output of link results
         - `parameters_outfile`: file for output of parameters results
         - `transitions_outfile`: file for output of transitions data
@@ -434,7 +439,9 @@ class McmcInputData(BplnInputData):
         self.disable_swaps = disable_swaps
         self.terms_based = terms_based
         self.intraterms = intraterms
+        self.independent_terms = independent_terms
         self.transition_ratio = transition_ratio
+        self.terms_outfile = terms_outfile
         self.parameters_outfile = parameters_outfile
         self.transitions_outfile = transitions_outfile
         self.detailed_transitions = detailed_transitions
