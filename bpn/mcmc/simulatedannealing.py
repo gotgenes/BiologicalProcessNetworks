@@ -94,10 +94,10 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
         current state as a (log of the) ratio of the two likelihoods.
 
         If this ratio is greater than 0 or e ^ -deltaE / temperature
-	is better then a random value from 0 to 1, then we accept the
-	proposed state. Therefore, when the temperature is very
-	large we are more likely to accept a worse state. Else we
-	don't accept the new state.
+        is better then a random value from 0 to 1, then we accept the
+        proposed state. Therefore, when the temperature is very
+        large we are more likely to accept a worse state. Else we
+        don't accept the new state.
 
         """
         proposed_state = self.current_state.create_new_state()
@@ -127,24 +127,25 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
     def run(self):
         """Anneal.
 
-	Temperature degrades by a percentage rather then a 
+        Temperature degrades by a percentage rather then a
         specific step size. This allows the temperature
-	to gradually cool off and resembles more of a 
-	real cooling down. We use 1 - stepsize to allow
-	the user to still input the number of steps.
-	While the number of steps does not directly correlate
-	to how many steps will be annealed, the number of 
-	states visited is still directly tied to the step
-	size.
+        to gradually cool off and resembles more of a
+        real cooling down. We use 1 - stepsize to allow
+        the user to still input the number of steps.
+        While the number of steps does not directly correlate
+        to how many steps will be annealed, the number of
+        states visited is still directly tied to the step
+        size.
 
         """
         while self.temperature > 0.1:
-	    self.next_state()
+            self.next_state()
             self.temperature *= (1-self.step_size)
 
+
 class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
-    """Similar to `PLNSimulatedAnnealing`, but using `numpy` 
-	arrays to track state information.
+    """Similar to `PLNSimulatedAnnealing`, but using `numpy`
+    arrays to track state information.
 
     """
     def __init__(
@@ -202,3 +203,4 @@ class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
         self.last_transition_info = None
         self.temperature = 100000
         self.step_size = 1.0/self.num_steps
+
