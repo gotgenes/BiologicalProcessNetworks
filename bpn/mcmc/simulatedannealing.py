@@ -82,7 +82,7 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
         )
         self.num_steps = num_steps
         self.temperature = 100000
-        self.step_size = (1.0/self.num_steps)
+        self.step_size = 1.0 / self.num_steps
 
 
     def next_state(self):
@@ -102,15 +102,16 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
         """
         proposed_state = self.current_state.create_new_state()
         proposed_transition_type = proposed_state._delta[0]
-        current_log_likelihood = \
-                self.current_state.calc_log_likelihood()
-        proposed_log_likelihood = \
-                proposed_state.calc_log_likelihood()
-        delta_e_log = proposed_log_likelihood - \
-                current_log_likelihood
+        current_log_likelihood = (
+                self.current_state.calc_log_likelihood())
+        proposed_log_likelihood = (
+                proposed_state.calc_log_likelihood())
+        delta_e_log = (proposed_log_likelihood -
+                current_log_likelihood)
 
         # Is the new solution better?
-        if delta_e_log > 0 or math.exp(-delta_e_log/self.temperature) > random.random():
+        if (delta_e_log > 0) or (
+                math.exp(-delta_e_log/self.temperature) > random.random()):
             print "Accepted new state"
             self.current_state = proposed_state
             logger.debug("Accepted proposed state.")
@@ -140,7 +141,7 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
         """
         while self.temperature > 0.1:
             self.next_state()
-            self.temperature *= (1-self.step_size)
+            self.temperature *= 1 - self.step_size
 
 
 class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
@@ -202,5 +203,5 @@ class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
         self.num_steps = num_steps
         self.last_transition_info = None
         self.temperature = 100000
-        self.step_size = 1.0/self.num_steps
+        self.step_size = 1.0 / self.num_steps
 
