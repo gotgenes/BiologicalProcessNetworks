@@ -81,6 +81,8 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
                 self.current_state.parameters_state.get_parameter_distributions()
         )
         self.num_steps = num_steps
+        # Don't hard-code this value. Pass it as a parameter at
+        # initialization or put it in defaults.py (or do both). -CDL
         self.temperature = 100000
         self.step_size = 1.0 / self.num_steps
 
@@ -106,12 +108,15 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
                 self.current_state.calc_log_likelihood())
         proposed_log_likelihood = (
                 proposed_state.calc_log_likelihood())
-        delta_e_log = (proposed_log_likelihood -
+        log_delta_e = (proposed_log_likelihood -
                 current_log_likelihood)
 
-        # Is the new solution better?
-        if (delta_e_log > 0) or (
-                math.exp(-delta_e_log/self.temperature) > random.random()):
+        # Is the new solution better? -PJW
+        #
+        # Move the math.exp part into log-space. This will crash when
+        # the delta_e gets too large. -CDL
+        if (log_delta_e > 0) or (
+                math.exp(-log_delta_e/self.temperature) > random.random()):
             print "Accepted new state"
             self.current_state = proposed_state
             logger.debug("Accepted proposed state.")
@@ -123,6 +128,10 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
 
         logger.debug("Log of state likelihood: %s" % (
                 log_state_likelihood))
+
+        # TODO: Phillip, record the state information to the state
+        # recorder (refer to the chains.py classes). We will want the
+        # transition information later.
 
 
     def run(self):
@@ -139,9 +148,23 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
         size.
 
         """
+        # Don't hard-code this value. Pass it as a parameter at
+        # initialization or put it in defaults.py (or do both). -CDL
         while self.temperature > 0.1:
             self.next_state()
             self.temperature *= 1 - self.step_size
+
+            # TODO: Log the progress of the Simulated Anealing (percent
+            # complete). See the run method in chains.py. To do that,
+            # convert this loop from a while-loop to a for-loop (you
+            # know how many steps you'll perform).
+            #
+            # You should then add an assert statement at the end to make
+            # sure that you've reached your desired ending temperature
+            # at the end of those steps, too. (You should probably not
+            # use ``current_temp == desired_final_temp`` because of
+            # floating-point error; instead, check that the difference
+            # between them is sufficiently small. -CDL
 
 
 class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
@@ -194,14 +217,16 @@ class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
                 active_gene_threshold,
                 transition_ratio,
                 selected_links_indices,
-                alpha,
-                beta,
-                link_prior,
-                parameters_state_class,
-                links_state_class
+                alpha=alpha,
+                beta=beta,
+                link_prior=link_prior,
+                parameters_state_class=parameters_state_class,
+                links_state_class=links_state_class
         )
         self.num_steps = num_steps
         self.last_transition_info = None
+        # Don't hard-code this value. Pass it as a parameter at
+        # initialization or put it in defaults.py (or do both). -CDL
         self.temperature = 100000
         self.step_size = 1.0 / self.num_steps
 
