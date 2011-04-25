@@ -27,6 +27,7 @@ BROADCAST_PERCENT = 1
 BURN_IN = 20000
 NUM_STEPS = 1000000
 TEMPERATURE = 100000
+END_TEMPERATURE = 0.1
 
 # If you alter this value, make sure you update the help string in
 # cli.py!
