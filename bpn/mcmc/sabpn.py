@@ -84,7 +84,9 @@ def main(argv=None):
             input_data.activity_threshold,
             input_data.transition_ratio,
             num_steps=input_data.steps,
-            parameters_state_class=parameters_state_class,
+            temperature=input_data.temperature,
+            end_temperature=input_data.end_temperature,
+	    parameters_state_class=parameters_state_class,
             links_state_class=links_state_class
     )
     logger.info("Beginning to Anneal. This may take a while...")

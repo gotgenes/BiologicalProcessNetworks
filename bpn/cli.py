@@ -376,6 +376,16 @@ class SaArgParser(ExpressionBasedArgParser):
                 help=("the number of steps to Anneal. "
 				"[default: %default]")
         )
+        self.cli_parser.add_option('--temperature', type='int',
+                default=mcmc.defaults.TEMPERATURE,
+                help=("the starting temperature to anneal from. "
+                                "[default: %default]")
+        )
+        self.cli_parser.add_option('--end_temperature', type='int',
+                default=mcmc.defaults.END_TEMPERATURE,
+                help=("the temperature to end annealing."
+                                "[default: %default]")
+        )
         self.cli_parser.add_option('--activity-threshold',
                 type='float',
                 default=mcmc.defaults.ACTIVITY_THRESHOLD,
@@ -802,7 +812,9 @@ class SaCli(ContextualCli):
                 annotations_dict=self.annotations_dict,
                 annotations_stats=self.annotations_stats,
                 steps=self.opts.steps,
-                activity_threshold=self.opts.activity_threshold,
+                temperature=self.opts.temperature,
+                end_temperature=self.opts.end_temperature,
+		activity_threshold=self.opts.activity_threshold,
                 free_parameters=self.opts.free_parameters,
                 disable_swaps=self.opts.disable_swaps,
                 transition_ratio=self.opts.transition_ratio,

@@ -17,7 +17,8 @@ import logging
 logger = logging.getLogger('bpn.sabpn.simulatedannealing')
 
 from defaults import NUM_STEPS
-
+from defaults import TEMPERATURE
+from defaults import END_TEMPERATURE
 
 class SimulatedAnnealing(object):
     pass
@@ -34,6 +35,8 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
             active_gene_threshold,
             transition_ratio,
             num_steps=NUM_STEPS,
+            temperature=TEMPERATURE,
+            end_temperature=END_TEMPERATURE,
             selected_links=None,
             alpha=None,
             beta=None,
@@ -81,9 +84,8 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
                 self.current_state.parameters_state.get_parameter_distributions()
         )
         self.num_steps = num_steps
-        # Don't hard-code this value. Pass it as a parameter at
-        # initialization or put it in defaults.py (or do both). -CDL
-        self.temperature = 100000
+        self.temperature = temperature
+	self.end_temperature = end_temperature
         self.step_size = 1.0 / self.num_steps
 
 
@@ -148,10 +150,10 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
         size.
 
         """
-        # Don't hard-code this value. Pass it as a parameter at
-        # initialization or put it in defaults.py (or do both). -CDL
-        while self.temperature > 0.1:
+        while self.temperature > self.end_temperature:
+            print "%s"%(self.end_temperature)
             self.next_state()
+            print "%s"%(self.temperature)
             self.temperature *= 1 - self.step_size
 
             # TODO: Log the progress of the Simulated Anealing (percent
@@ -178,7 +180,9 @@ class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
             active_gene_threshold,
             transition_ratio,
             num_steps=NUM_STEPS,
-            selected_links_indices=None,
+            temperature=TEMPERATURE,
+            end_temperature=END_TEMPERATURE,
+	    selected_links_indices=None,
             alpha=None,
             beta=None,
             link_prior=None,
@@ -225,8 +229,6 @@ class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
         )
         self.num_steps = num_steps
         self.last_transition_info = None
-        # Don't hard-code this value. Pass it as a parameter at
-        # initialization or put it in defaults.py (or do both). -CDL
-        self.temperature = 100000
+        self.end_temperature = end_temperature
+        self.temperature = temperature
         self.step_size = 1.0 / self.num_steps
-
