@@ -133,6 +133,16 @@ def main(argv=None):
             links_state_class = states.IntraTermsAndLinksState
         else:
             links_state_class = states.TermsAndLinksState
+
+        if input_data.fixed_distributions:
+            logger.info("Using fixed distributions for term and "
+                    "link prior.")
+            parameters_state_class = (
+                    states.FixedDistributionParametersState)
+        else:
+            parameters_state_class = (
+                    states.TermPriorParametersState)
+
         markov_chain = chains.TermsBasedMarkovChain(
                 annotated_interactions,
                 input_data.activity_threshold,
@@ -140,6 +150,7 @@ def main(argv=None):
                 num_steps=input_data.steps,
                 burn_in=input_data.burn_in,
                 state_recorder_class=state_recorder_class,
+                parameters_state_class=parameters_state_class,
                 links_state_class=links_state_class,
                 seed_links_indices=seed_links
         )

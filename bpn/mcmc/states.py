@@ -159,8 +159,7 @@ class PLNParametersState(State):
             if value is None:
                 # The user did not define the value ahead of time;
                 # select one randomly
-                rand_index = random.randint(0,
-                        len(param_distribution) - 1)
+                rand_index = random.randrange(len(param_distribution))
                 # Set the index
                 setattr(self, param_index_name, rand_index)
                 # Set the value of the parameter
@@ -413,12 +412,12 @@ class RandomTransitionParametersState(PLNParametersState):
         size_parameter_distribution = len(parameter_distribution)
         current_index = getattr(self, '_%s_index' % parameter_to_alter)
         # Roll a die to get the new parameter index and value.
-        new_index = random.randint(0, size_parameter_distribution - 1)
+        new_index = random.randrange(size_parameter_distribution)
         # We could by random chance end up with the same index (and
         # value) as the current one; keep sampling until we have a
         # different index.
         while new_index == current_index:
-            new_index = random.randint(0, size_parameter_distribution - 1)
+            new_index = random.randrange(size_parameter_distribution)
         # Now set the parameter and its index in the new state
         setattr(new_state, '_%s_index' % parameter_to_alter,
                 new_index)
@@ -558,8 +557,7 @@ class TermPriorParametersState(RandomTransitionParametersState):
             if value is None:
                 # The user did not define the value ahead of time;
                 # select one randomly
-                rand_index = random.randint(0,
-                        len(param_distribution) - 1)
+                rand_index = random.randrange(len(param_distribution))
                 # Set the index
                 setattr(self, param_index_name, rand_index)
                 # Set the value of the parameter
@@ -584,6 +582,61 @@ class TermPriorParametersState(RandomTransitionParametersState):
                     raise ParameterNotInDistributionError(error_message)
                 # Set the value of the parameter
                 setattr(self, param_name, value)
+
+
+class FixedDistributionParametersState(TermPriorParametersState):
+    """Similar to `TermPriorParametersState`, but with fixed
+    distributions for the term and link priors.
+
+    """
+    # Gives a range [0.025, 0.5], inclusive.
+    _term_prior_distribution = [0.025 * k for k in range(1, 21)]
+    _link_prior_distribution = _term_prior_distribution
+    if SUPERDEBUG_MODE:
+        logger.log(SUPERDEBUG, "Term prior distribution: %s" %
+                _term_prior_distribution)
+    def __init__(
+            self,
+            number_of_links,
+            number_of_terms,
+            alpha=None,
+            beta=None,
+            link_prior=None,
+            term_prior=None
+        ):
+        """Create a new instance.
+
+        :Parameters:
+        - `number_of_links`: the total number of links being considered
+        - `number_of_terms`: the total number of terms being considered
+        - `alpha`: the false-positive rate, the portion of gene-gene
+          interactions which were included, but shouldn't have been
+        - `beta`: the false-negative rate, the portion of gene-gene
+          interactions which weren't included, but should have been
+        - `link_prior`: the assumed probability we would select any one
+          link
+        - `term_prior`:the assumed probability we would select any one
+          term
+
+
+        """
+        # Set all parameters, if not set already, and validate them.
+        self._set_parameters_at_init(alpha, beta, link_prior,
+                term_prior)
+        logger.debug("Initial parameter settings: "
+                "alpha=%s, beta=%s, link_prior=%s, term_prior=%s" % (
+                    self.alpha, self.beta, self.link_prior,
+                    self.term_prior
+                )
+        )
+
+        self._parameter_selection_cutoffs = None
+
+        # This variable is used to store the previous state that the
+        # current state arrived from. When set, it should be a tuple
+        # containing the name of the parameter, and the index in the
+        # distribution that it had previous to this state.
+        self._delta = None
 
 
 class PLNLinksState(State):
@@ -1714,7 +1767,7 @@ class PLNOverallState(State):
             # NOTE: It's important process_links be a list for this step,
             # because random.sample doesn't work on sets
             seed_links = random.sample(process_links,
-                    random.randint(0, len(process_links)))
+                    random.randrange(len(process_links) + 1))
         # We need to convert process links into a set, now.
         process_links = frozenset(process_links)
         # Next, figure out which interactions are active
@@ -1889,8 +1942,8 @@ class ArrayOverallState(PLNOverallState):
             # Note that we're randomly selecting a random number of
             # indices here.
             seed_links_indices = random.sample(
-                    xrange(num_process_links),
-                    random.randint(0, num_process_links)
+                    range(num_process_links),
+                    random.randrange(num_process_links + 1)
             )
         # Next, figure out which interactions are active
         logger.info("Determining active interactions.")

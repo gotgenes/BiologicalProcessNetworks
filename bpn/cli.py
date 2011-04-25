@@ -313,6 +313,11 @@ class McmcArgParser(ExpressionBasedArgParser):
                 help=("parameters will be adjusted randomly, rather "
                     "than incrementally")
         )
+        self.cli_parser.add_option('--fixed-distributions',
+                action='store_true',
+                help=("use fixed distributions for link (and term) "
+                    "prior [implies --free-parameters]")
+        )
         self.cli_parser.add_option('--disable-swaps', action='store_true',
                 help=("disables swapping links as an option for "
                     "transitions")
@@ -749,6 +754,7 @@ class McmcCli(ContextualCli):
                 activity_threshold=self.opts.activity_threshold,
                 seed_links=self.seed_links,
                 free_parameters=self.opts.free_parameters,
+                fixed_distributions=self.opts.fixed_distributions,
                 disable_swaps=self.opts.disable_swaps,
                 terms_based=self.opts.terms_based,
                 intraterms=self.opts.intraterms,

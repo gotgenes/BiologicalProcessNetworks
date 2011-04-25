@@ -370,6 +370,7 @@ class McmcInputData(BplnInputData):
             activity_threshold,
             seed_links,
             free_parameters,
+            fixed_distributions,
             disable_swaps,
             terms_based,
             intraterms,
@@ -401,6 +402,9 @@ class McmcInputData(BplnInputData):
         - `free_parameters`: `True` if parameters are free take a random
           value from their distribution, `False` if they may only take
           adjoining values
+        - `fixed_distributions`: `True` if fixed distributions for link
+          (and term) priors should be used, `False` if dynamic
+          distributions should be used
         - `disable_swaps`: `True` if swap transitions are to be
           disabled, `False` otherwise.
         - `terms_based`: `True` if terms-based model is to be used,
@@ -436,6 +440,7 @@ class McmcInputData(BplnInputData):
         self.activity_threshold = activity_threshold
         self.seed_links = seed_links
         self.free_parameters = free_parameters
+        self.fixed_distributions = fixed_distributions
         self.disable_swaps = disable_swaps
         self.terms_based = terms_based
         self.intraterms = intraterms
