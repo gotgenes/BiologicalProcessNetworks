@@ -1591,14 +1591,14 @@ class IndependentTermsAndLinksState(IntraTermsAndLinksState):
     selected/unselected independent from link selection/unselection.
 
     """
-    def _unselect_terms_via_link(self, link):
-        for term in link:
-            # Decrement the link count.
-            self._term_links_counts[term] -= 1
-            assert self._term_links_counts[term] >= 0, ("Term {0} "
-                    "reached a negative links count!").format(term)
-            # Note that we do not unselect the term here, even if its
-            # links count reaches 0.
+    #def _unselect_terms_via_link(self, link):
+        #for term in link:
+            ## Decrement the link count.
+            #self._term_links_counts[term] -= 1
+            #assert self._term_links_counts[term] >= 0, ("Term {0} "
+                    #"reached a negative links count!").format(term)
+            ## Note that we do not unselect the term here, even if its
+            ## links count reaches 0.
 
 
     def _calc_num_terms_based_transitions(self):
