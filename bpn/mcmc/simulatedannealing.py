@@ -12,13 +12,12 @@
 import math
 import random
 import states
+import recorders
 
 import logging
 logger = logging.getLogger('bpn.sabpn.simulatedannealing')
 
-from defaults import NUM_STEPS
-from defaults import TEMPERATURE
-from defaults import END_TEMPERATURE
+from defaults import NUM_STEPS, TEMPERATURE,  END_TEMPERATURE
 
 class SimulatedAnnealing(object):
     pass
@@ -41,6 +40,7 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
             alpha=None,
             beta=None,
             link_prior=None,
+            state_recorder_class=recorders.PLNStateRecorder,
             parameters_state_class=states.PLNParametersState
         ):
         """Create a new instance.
@@ -53,6 +53,8 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
         - `transition_ratio`: a `float` indicating the ratio of link
           transitions to parameter transitions
         - `num_steps`: the number of steps to take anneal
+        - `temperature`: the starting temperature to anneal
+        - `end_temperature`: the temperature to end annealing
         - `selected_links`: a user-defined seed of links to start as
           selected
         - `alpha`: the false-positive rate; see `PLNParametersState` for
@@ -85,9 +87,19 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
         )
         self.num_steps = num_steps
         self.temperature = temperature
-	self.end_temperature = end_temperature
+        self.end_temperature = end_temperature
         self.step_size = 1.0 / self.num_steps
-
+        # This attribute will keep track of how we transition through
+        # the Markov chain by storing a tuple for the previous
+        # transition. The first item for the transition information is
+        # the type of transition performed, which is obtained from the
+        # PLNOverallState._delta attribute's key. The second item of the
+        # tuple is a floating point value representing the log of the
+        # transition ratio computed in calc_log_transition_ratio(). The
+        # third item in the tuple is either `True`, representing that
+        # the transition was rejected, or `False`, representing that the
+        # transition was accepted.
+        self.last_transition_info = None
 
     def next_state(self):
         """Move to the next state in Simulated Annealing.
@@ -113,27 +125,29 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
         log_delta_e = (proposed_log_likelihood -
                 current_log_likelihood)
 
-        # Is the new solution better? -PJW
-        #
-        # Move the math.exp part into log-space. This will crash when
-        # the delta_e gets too large. -CDL
+        # Is the new solution better?
         if (log_delta_e > 0) or (
-                math.exp(-log_delta_e/self.temperature) > random.random()):
-            print "Accepted new state"
+                (-log_delta_e/self.temperature) > \
+                random.random()):
+            print "Accepted NEW"
             self.current_state = proposed_state
             logger.debug("Accepted proposed state.")
             log_state_likelihood = proposed_log_likelihood
+            accepted = True
         else:
-            print "Reject Random state"
+            print "Rejected State"
             logger.debug("Rejected proposed state.")
+            accepted = False
             log_state_likelihood = current_log_likelihood
 
         logger.debug("Log of state likelihood: %s" % (
                 log_state_likelihood))
-
-        # TODO: Phillip, record the state information to the state
-        # recorder (refer to the chains.py classes). We will want the
-        # transition information later.
+        self.last_transition_info = (
+                proposed_transition_type,
+                log_delta_e,
+                log_state_likelihood,
+                accepted
+        )
 
 
     def run(self):
@@ -150,23 +164,16 @@ class PLNSimulatedAnnealing(SimulatedAnnealing):
         size.
 
         """
-        while self.temperature > self.end_temperature:
-            print "%s"%(self.end_temperature)
+        broadcast_percent_complete = 0
+        for i in xrange(self.num_steps*10):
+            logger.debug("Steps complete %d of %d" % (i + 1, 
+                    self.num_steps))
             self.next_state()
-            print "%s"%(self.temperature)
             self.temperature *= 1 - self.step_size
 
-            # TODO: Log the progress of the Simulated Anealing (percent
-            # complete). See the run method in chains.py. To do that,
-            # convert this loop from a while-loop to a for-loop (you
-            # know how many steps you'll perform).
-            #
-            # You should then add an assert statement at the end to make
-            # sure that you've reached your desired ending temperature
-            # at the end of those steps, too. (You should probably not
-            # use ``current_temp == desired_final_temp`` because of
-            # floating-point error; instead, check that the difference
-            # between them is sufficiently small. -CDL
+        # Assert tha the temperature has in fact cooled down enough
+        assert (self.temperature - self.end_temperature) < 10, \
+            'The temperature did not cool down enough'
 
 
 class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
@@ -182,10 +189,11 @@ class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
             num_steps=NUM_STEPS,
             temperature=TEMPERATURE,
             end_temperature=END_TEMPERATURE,
-	    selected_links_indices=None,
+            selected_links_indices=None,
             alpha=None,
             beta=None,
             link_prior=None,
+            state_recorder_class=recorders.ArrayStateRecorder,
             parameters_state_class=states.PLNParametersState,
             links_state_class=states.ArrayLinksState
         ):
@@ -199,6 +207,8 @@ class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
         - `transition_ratio`: a `float` indicating the ratio of link
           transitions to parameter transitions
         - `num_steps`: the number of steps to anneal
+        - `temperature`: the temperature to start annealing from.
+        - `end_temperature`: the temperature to stop annealing.
         - `selected_links_indices`: a user-defined seed of indices to
           links to start as selected
         - `alpha`: the false-positive rate; see `PLNParametersState` for
@@ -227,6 +237,13 @@ class ArraySimulatedAnnealing(PLNSimulatedAnnealing):
                 parameters_state_class=parameters_state_class,
                 links_state_class=links_state_class
         )
+
+        self.state_recorder = state_recorder_class(
+                annotated_interactions.get_all_links(),
+                self.current_state.parameters_state.get_parameter_distributions()
+        )
+
+        self.last_transition_info = None
         self.num_steps = num_steps
         self.last_transition_info = None
         self.end_temperature = end_temperature
