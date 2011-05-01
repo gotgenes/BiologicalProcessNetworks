@@ -473,7 +473,7 @@ class SaInputData(BplnInputData):
             steps,
             temperature,
             end_temperature,
-	    activity_threshold,
+            activity_threshold,
             free_parameters,
             disable_swaps,
             transition_ratio,
@@ -493,9 +493,9 @@ class SaInputData(BplnInputData):
         - `annotations_stats`: a dictionary containing statistics about
           the annotations
         - `steps`: the number of steps to anneal
-        - 'temperature': the starting temperature to anneal from
-        - 'end_temperature': the temperature to anneal to        
-	- `activity_threshold`: the threshold at which a gene is
+        - `temperature`: the starting temperature to anneal from
+        - `end_temperature`: the temperature to anneal to
+        - `activity_threshold`: the threshold at which a gene is
           declared active
         - `free_parameters`: `True` if parameters are free take a random
           value from their distribution, `False` if they may only take
@@ -526,7 +526,7 @@ class SaInputData(BplnInputData):
         del self.num_links
         self.steps = steps
         self.temperature = temperature
-	self.end_temperature = end_temperature
+        self.end_temperature = end_temperature
         self.activity_threshold = activity_threshold
         self.free_parameters = free_parameters
         self.disable_swaps = disable_swaps
