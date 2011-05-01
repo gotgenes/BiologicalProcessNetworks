@@ -1694,6 +1694,15 @@ class IndependentTermsAndLinksState(IntraTermsAndLinksState):
             return ('link_selection', link_index)
 
 
+    def calc_num_neighboring_states(self):
+        """Returns the total number of states neighboring this one."""
+        num_neighboring_states = (
+                self._calc_num_terms_based_transitions() +
+                self._calc_num_links_based_transitions()
+        )
+        return num_neighboring_states
+
+
     def create_new_state(self):
         """Creates a new state on the basis of this state instance."""
         logger.debug("Creating a new links state.")
@@ -1839,22 +1848,22 @@ class PLNOverallState(State):
         """
         # TODO: Add some more documentation to this docstring
         num_selected_links = self.links_state.calc_num_selected_links()
-        num_unselected_links = \
-                self.links_state.calc_num_unselected_links()
+        num_unselected_links = (
+                self.links_state.calc_num_unselected_links())
         link_prior = self.parameters_state.link_prior
-        log_prob_of_selected = \
-                (num_selected_links * \
-                math.log10(link_prior)) + \
-                (num_unselected_links * \
-                math.log10(1 - link_prior))
+        log_prob_of_selected = (
+                (num_selected_links * math.log10(link_prior)) +
+                (num_unselected_links * math.log10(1 - link_prior))
+        )
         return log_prob_of_selected
 
 
     def calc_num_neighboring_states(self):
         """Returns the total number of states neighboring this one."""
-        num_neighboring_states = \
-                self.links_state.calc_num_neighboring_states() * \
+        num_neighboring_states = (
+                self.links_state.calc_num_neighboring_states() *
                 self.parameters_state.calc_num_neighboring_states()
+        )
         return num_neighboring_states
 
 
@@ -1864,13 +1873,13 @@ class PLNOverallState(State):
 
         """
         # TODO: Add some more documentation to this docstring
-        log_prob_obs_given_sel = \
-                self.calc_log_prob_observed_given_selected()
+        log_prob_obs_given_sel = (
+                self.calc_log_prob_observed_given_selected())
         log_prob_sel = self.calc_log_prob_selected()
-        num_neighbor_states = \
-                self.calc_num_neighboring_states()
-        log_likelihood = log_prob_obs_given_sel + log_prob_sel - \
-                math.log10(num_neighbor_states)
+        num_neighbor_states = (
+                self.calc_num_neighboring_states())
+        log_likelihood = (log_prob_obs_given_sel + log_prob_sel -
+                math.log10(num_neighbor_states))
         return log_likelihood
 
 
@@ -1890,8 +1899,8 @@ class PLNOverallState(State):
         else:
             # Propose a transition to a new parameters state
             logger.debug("Chose parameter transition.")
-            new_state.parameters_state = \
-                    self.parameters_state.create_new_state()
+            new_state.parameters_state = (
+                    self.parameters_state.create_new_state())
             new_state._delta = new_state.parameters_state._delta
         return new_state
 
