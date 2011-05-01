@@ -858,6 +858,9 @@ class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
         # Delete the dictionary mapping since we will not use it
         # hereafter.
         del self._annotations_to_interactions
+
+        self._intraterm_interactions = dict(
+                self._intraterm_interactions)
         # TODO: convert intraterm interactions?
 
 
@@ -943,6 +946,7 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
         )
 
         num_terms = len(self._annotation_terms)
+
         # This 2d symmetric array will map a pair of link indices to
         # their respective interactions, contained in the list
         # self._link_interactions.
@@ -975,6 +979,23 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
         # Delete the dictionary mapping since we will not use it
         # hereafter.
         del self._annotations_to_interactions
+
+        # We follow a similar pattern for the intraterm interactions.
+        self._intraterm_indices = numpy.zeros(num_terms, int)
+        named_terms, self._intraterm_interactions = (
+                self._intraterm_interactions.keys(),
+                self._intraterm_interactions.values()
+        )
+        self._intraterm_interactions.insert(0, None)
+        # For each term that has intraterm interactions, we'll denote
+        # the index in the _intraterm_interactions where we can find its
+        # intraterm interactions.
+        for i, term in enumerate(named_terms):
+            term_index = self.get_term_index(term)
+            # Note that we increment the index by 1 because the index 0
+            # in _intraterm_interactions is None and we reserve that for
+            # indicating a term has no intraterm interactions.
+            self._intraterm_indices[term_index] = i + 1
 
 
     def get_term_index(self, term):
@@ -1027,6 +1048,21 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
         # TODO: Should we check to see if the pair of terms actually
         # co-annotate any interactions?
         return (self.get_term_index(term1), self.get_term_index(term2))
+
+
+    def get_intraterm_interactions(self, term):
+        """Returns a `set` of all interactions for which the term
+        annotates both interacting genes.
+
+        Returns `None` if no intraterm interactions exist for the term.
+
+        :Parameters:
+        - `term`: an annotation term
+
+        """
+        index = self._intraterm_indices[term]
+        intraterm_interactions = self._intraterm_interactions[index]
+        return intraterm_interactions
 
 
     def get_coannotated_interactions(self, link_index):
