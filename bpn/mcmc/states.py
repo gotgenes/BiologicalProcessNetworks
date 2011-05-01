@@ -137,6 +137,22 @@ class PLNParametersState(State):
         self._delta = None
 
 
+    def _get_closest_parameter_index_and_value(self, desired_value,
+            distribution):
+        """Returns the index and value of the parameter value closest to
+        the desired value.
+
+        :Parameters:
+        - `desired_value`: value for which the nearest match is sought
+        - `distribution`: parameter distribution from which the nearest
+          value is sought
+
+        """
+        closest_index, closest_value = min(enumerate(distribution),
+                key=lambda d: abs(d[1] - desired_value))
+        return (closest_index, closest_value)
+
+
     def _set_parameters_at_init(self, alpha, beta, link_prior):
         """A helper function to verify and set the parameters at
         instantiation.
@@ -166,24 +182,13 @@ class PLNParametersState(State):
                 value = param_distribution[rand_index]
                 setattr(self, param_name, value)
             else:
-                # The user defined this parameter
-                try:
-                    # Get the index for this value and set it for the
-                    # instance
-                    index = param_distribution.index(value)
-                    setattr(self, param_index_name, index)
-                except ValueError:
-                    # The user gave a value for the parameter that is
-                    # not available in the distribution; re-raise the
-                    # exception and notify the user to supply a better
-                    # value
-                    error_message = ("The value of %s for %s is "
-                            "not available in the distribution" % (
-                                value, param_name)
-                    )
-                    raise ParameterNotInDistributionError(error_message)
-                # Set the value of the parameter
-                setattr(self, param_name, value)
+                # The user defined this parameter.
+                # Get the value closest to this parameter.
+                param_index, param_value = (
+                        self._get_closest_parameter_index_and_value(
+                                value, param_distribution))
+                setattr(self, param_index_name, param_index)
+                setattr(self, param_name, param_value)
 
 
     def _get_parameter_neighboring_indices(self, parameter_name):
@@ -564,24 +569,13 @@ class TermPriorParametersState(RandomTransitionParametersState):
                 value = param_distribution[rand_index]
                 setattr(self, param_name, value)
             else:
-                # The user defined this parameter
-                try:
-                    # Get the index for this value and set it for the
-                    # instance
-                    index = param_distribution.index(value)
-                    setattr(self, param_index_name, index)
-                except ValueError:
-                    # The user gave a value for the parameter that is
-                    # not available in the distribution; re-raise the
-                    # exception and notify the user to supply a better
-                    # value
-                    error_message = ("The value of %s for %s is "
-                            "not available in the distribution" % (
-                                value, param_name)
-                    )
-                    raise ParameterNotInDistributionError(error_message)
-                # Set the value of the parameter
-                setattr(self, param_name, value)
+                # The user defined this parameter.
+                # Get the value closest to this parameter.
+                param_index, param_value = (
+                        self._get_closest_parameter_index_and_value(
+                                value, param_distribution))
+                setattr(self, param_index_name, param_index)
+                setattr(self, param_name, param_value)
 
 
 class FixedDistributionParametersState(TermPriorParametersState):

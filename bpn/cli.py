@@ -303,6 +303,22 @@ class McmcArgParser(ExpressionBasedArgParser):
                     "%default]"
                 )
         )
+        self.cli_parser.add_option('--alpha', type='float',
+                help="designate the starting false positive rate"
+        )
+        self.cli_parser.add_option('--beta', type='float',
+                help="designate the starting false negative rate"
+        )
+        self.cli_parser.add_option('--link-prior', type='float',
+                help=("designate the starting prior probability "
+                    "for adding a link")
+        )
+        self.cli_parser.add_option('--term-prior', type='float',
+                help=("designate the starting prior probability "
+                    "for adding a term [NOTE: applies only when used "
+                    "in conjunction with '--terms-based'"
+                )
+        )
         self.cli_parser.add_option('--seed-links',
                 help=("A two-column CSV-formatted file containing "
                     "pairs of terms to use as seed for links when "
@@ -762,6 +778,10 @@ class McmcCli(ContextualCli):
                 burn_in=self.opts.burn_in,
                 steps=self.opts.steps,
                 activity_threshold=self.opts.activity_threshold,
+                alpha=self.opts.alpha,
+                beta=self.opts.beta,
+                link_prior=self.opts.link_prior,
+                term_prior=self.opts.term_prior,
                 seed_links=self.seed_links,
                 free_parameters=self.opts.free_parameters,
                 fixed_distributions=self.opts.fixed_distributions,

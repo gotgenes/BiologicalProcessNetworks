@@ -149,10 +149,14 @@ def main(argv=None):
                 input_data.transition_ratio,
                 num_steps=input_data.steps,
                 burn_in=input_data.burn_in,
+                seed_links_indices=seed_links,
+                alpha=input_data.alpha,
+                beta=input_data.beta,
+                link_prior=input_data.link_prior,
+                term_prior=input_data.term_prior,
                 state_recorder_class=state_recorder_class,
                 parameters_state_class=parameters_state_class,
                 links_state_class=links_state_class,
-                seed_links_indices=seed_links
         )
     else:
         if input_data.disable_swaps:
@@ -179,10 +183,13 @@ def main(argv=None):
                 input_data.transition_ratio,
                 num_steps=input_data.steps,
                 burn_in=input_data.burn_in,
+                seed_links_indices=seed_links,
+                alpha=input_data.alpha,
+                beta=input_data.beta,
+                link_prior=input_data.link_prior,
                 state_recorder_class=state_recorder_class,
                 parameters_state_class=parameters_state_class,
                 links_state_class=links_state_class,
-                seed_links_indices=seed_links
         )
 
     logger.info("Beginning to run through states in the chain. This "
