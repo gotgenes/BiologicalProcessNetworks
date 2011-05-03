@@ -125,28 +125,55 @@ class PLNMarkovChain(MarkovChain):
         """
         proposed_state = self.current_state.create_new_state()
         proposed_transition_type = proposed_state._delta[0]
-        current_log_likelihood = \
-                self.current_state.calc_log_likelihood()
-        proposed_log_likelihood = \
-                proposed_state.calc_log_likelihood()
-        log_transition_ratio = proposed_log_likelihood - \
-                current_log_likelihood
+        current_log_likelihood = (
+                self.current_state.calc_log_likelihood())
+        proposed_log_likelihood = (
+                proposed_state.calc_log_likelihood())
+        log_transition_ratio = (proposed_log_likelihood -
+                current_log_likelihood)
         logger.debug("Log of transition ratio: %s" % (
                 log_transition_ratio))
+        # Remember, a very favorable state has a likelihood close to 1
+        # and its log-likelihood close to 0 (i.e., very small negative
+        # value); a very unfavorable state has a likelihood close to 0,
+        # and a log-likelihood with a very negative value (large
+        # magnitude).
 
-        # Flip a coin to see if we'll accept the transition
-        log_rejection_coin = math.log10(random.random())
-        logger.debug("Log rejection coin: %s" % log_rejection_coin)
-        if log_rejection_coin < log_transition_ratio:
-            # We accept the proposed state!
+        # If the proposed state is more likely than the current state,
+        # the proposed state's log-likelihood will be a smaller negative
+        # number than the current state's; thus log_transition_ratio
+        # will be a positive value. If the proposed state is less likely
+        # than the current state, the proposed state's log-likelihood
+        # will be a larger negative number than the current state's;
+        # thus the log_transition_ratio will be a negative value.
+        #
+        # If the proposed state is more likely, we want to go ahead and
+        # accept it.
+        if log_transition_ratio > 0:
             self.current_state = proposed_state
             logger.debug("Accepted proposed state.")
             accepted = True
             log_state_likelihood = proposed_log_likelihood
         else:
-            logger.debug("Rejected proposed state.")
-            accepted = False
-            log_state_likelihood = current_log_likelihood
+            # Otherwise, the proposed state is equally or less likely
+            # than the current state, however, we may still choose it,
+            # even though this may be unfavorable, to avoid local
+            # maxima. We will do this by drawing a number uniformly at
+            # random in the range [0, 1], as the probability we will
+            # reject the state. If the log of the log-transition ratio
+            # is greater than the log of the rejection probability,
+            # we'll still accept the less favorable proposed state.
+            log_rejection_prob = math.log10(random.random())
+            logger.debug("Log rejection probability: %s" % log_rejection_prob)
+            if log_transition_ratio > log_rejection_prob:
+                self.current_state = proposed_state
+                logger.debug("Accepted proposed state.")
+                accepted = True
+                log_state_likelihood = proposed_log_likelihood
+            else:
+                logger.debug("Rejected proposed state.")
+                accepted = False
+                log_state_likelihood = current_log_likelihood
 
         logger.debug("Log of state likelihood: %s" % (
                 log_state_likelihood))
