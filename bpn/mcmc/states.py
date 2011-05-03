@@ -1314,21 +1314,21 @@ class TermsAndLinksState(NoSwapArrayLinksState):
                 if not self.term_selections[index[0]]:
                     self.select_term(index[0])
                 self.select_link(index)
-        else:
-            # We have to have at least one link selected.
-            interactions = None
-            random_term1 = None
-            random_term2 = None
-            while (random_term1 == random_term2) or (interactions is
-                    None):
-                random_term1 = random.randrange(self._num_terms)
-                random_term2 = random.randrange(self._num_terms)
-                interactions = (
-                        self._annotated_interactions.get_coannotated_interactions(
-                            (random_term1, random_term2))
-                )
-            self.select_term(random_term1)
-            self.select_link((random_term1, random_term2))
+        #else:
+            ## We have to have at least one link selected.
+            #interactions = None
+            #random_term1 = None
+            #random_term2 = None
+            #while (random_term1 == random_term2) or (interactions is
+                    #None):
+                #random_term1 = random.randrange(self._num_terms)
+                #random_term2 = random.randrange(self._num_terms)
+                #interactions = (
+                        #self._annotated_interactions.get_coannotated_interactions(
+                            #(random_term1, random_term2))
+                #)
+            #self.select_term(random_term1)
+            #self.select_link((random_term1, random_term2))
 
         self._delta = None
 
@@ -1764,13 +1764,13 @@ class PLNOverallState(State):
 
         """
         process_links = annotated_interactions.get_all_links()
-        # Choose some sample of the process links to be selected
-        # initially, if none have been provided
-        if seed_links is None:
-            # NOTE: It's important process_links be a list for this step,
-            # because random.sample doesn't work on sets
-            seed_links = random.sample(process_links,
-                    random.randrange(len(process_links) + 1))
+        ## Choose some sample of the process links to be selected
+        ## initially, if none have been provided
+        #if seed_links is None:
+            ## NOTE: It's important process_links be a list for this step,
+            ## because random.sample doesn't work on sets
+            #seed_links = random.sample(process_links,
+                    #random.randrange(len(process_links) + 1))
         # We need to convert process links into a set, now.
         process_links = frozenset(process_links)
         # Next, figure out which interactions are active
@@ -1949,13 +1949,13 @@ class ArrayOverallState(PLNOverallState):
 
         """
         num_process_links = annotated_interactions.calc_num_links()
-        if seed_links_indices is None:
-            # Note that we're randomly selecting a random number of
-            # indices here.
-            seed_links_indices = random.sample(
-                    range(num_process_links),
-                    random.randrange(num_process_links + 1)
-            )
+        #if seed_links_indices is None:
+            ## Note that we're randomly selecting a random number of
+            ## indices here.
+            #seed_links_indices = random.sample(
+                    #range(num_process_links),
+                    #random.randrange(num_process_links + 1)
+            #)
         # Next, figure out which interactions are active
         logger.info("Determining active interactions.")
         active_interactions = \
@@ -2031,11 +2031,11 @@ class TermsBasedOverallState(ArrayOverallState):
         num_process_links = annotated_interactions.calc_num_links()
         num_terms = annotated_interactions.calc_num_terms()
 
-        if seed_links_indices is None:
-            seed_links_indices = random.sample(
-                    annotated_interactions.get_all_links(),
-                    random.randrange(num_process_links)
-            )
+        #if seed_links_indices is None:
+            #seed_links_indices = random.sample(
+                    #annotated_interactions.get_all_links(),
+                    #random.randrange(num_process_links)
+            #)
 
         # Next, figure out which interactions are active
         logger.info("Determining active interactions.")
