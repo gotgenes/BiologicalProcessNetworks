@@ -1877,14 +1877,6 @@ class PLNOverallState(State):
         return log_likelihood
 
 
-    def copy(self):
-        """Create a copy of this state instance."""
-        newcopy = super(PLNOverallState, self).copy()
-        newcopy.parameters_state = self.parameters_state.copy()
-        newcopy.links_state = self.links_state.copy()
-        return newcopy
-
-
     def create_new_state(self):
         """Creates a new state on the basis of this state instance."""
         logger.debug("Creating new overall state.")
