@@ -44,8 +44,8 @@ TRANSITIONS_FIELDNAMES = [
         'accepted'
 ]
 DETAILED_TRANSITIONS_FIELDNAMES = TRANSITIONS_FIELDNAMES + [
-        'alpha',
-        'beta',
+        'link_false_pos',
+        'link_false_neg',
         'link_prior',
         'num_selected_links',
         'num_unselected_links',

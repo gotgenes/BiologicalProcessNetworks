@@ -40,8 +40,8 @@ class PLNMarkovChain(MarkovChain):
             num_steps=NUM_STEPS,
             burn_in=BURN_IN,
             seed_links=None,
-            alpha=None,
-            beta=None,
+            link_false_pos=None,
+            link_false_neg=None,
             link_prior=None,
             state_recorder_class=recorders.PLNStateRecorder,
             parameters_state_class=states.PLNParametersState
@@ -61,10 +61,12 @@ class PLNMarkovChain(MarkovChain):
           discarded until complete)
         - `seed_links`: a user-defined seed of links to start as
           selected
-        - `alpha`: the false-positive rate; see `PLNParametersState` for
-          more information
-        - `beta`: the false-negative rate; see `PLNParametersState` for
-          more information
+        - `link_false_pos`: the false-positive rate for links, the
+          portion of gene-gene interactions which were included, but
+          shouldn't have been
+        - `link_false_neg`: the false-negative rate for links, the
+          portion of gene-gene interactions which weren't included, but
+          should have been
         - `link_prior`: the assumed probability we would pick any one
           link as being active; see `PLNParametersState` for more
           information
@@ -79,8 +81,8 @@ class PLNMarkovChain(MarkovChain):
                 active_gene_threshold,
                 transition_ratio,
                 seed_links,
-                alpha,
-                beta,
+                link_false_pos,
+                link_false_neg,
                 link_prior,
                 parameters_state_class
 
@@ -235,8 +237,8 @@ class ArrayMarkovChain(PLNMarkovChain):
             num_steps=NUM_STEPS,
             burn_in=BURN_IN,
             seed_links_indices=None,
-            alpha=None,
-            beta=None,
+            link_false_pos=None,
+            link_false_neg=None,
             link_prior=None,
             state_recorder_class=recorders.ArrayStateRecorder,
             parameters_state_class=states.PLNParametersState,
@@ -257,10 +259,12 @@ class ArrayMarkovChain(PLNMarkovChain):
           discarded until complete)
         - `seed_links_indices`: a user-defined seed of indices to
           links to start as selected
-        - `alpha`: the false-positive rate; see `PLNParametersState` for
-          more information
-        - `beta`: the false-negative rate; see `PLNParametersState` for
-          more information
+        - `link_false_pos`: the false-positive rate for links, the
+          portion of gene-gene interactions which were included, but
+          shouldn't have been
+        - `link_false_neg`: the false-negative rate for links, the
+          portion of gene-gene interactions which weren't included, but
+          should have been
         - `link_prior`: the assumed probability we would pick any one
           link as being active; see `PLNParametersState` for more
           information
@@ -277,8 +281,8 @@ class ArrayMarkovChain(PLNMarkovChain):
                 active_gene_threshold,
                 transition_ratio,
                 seed_links_indices,
-                alpha,
-                beta,
+                link_false_pos,
+                link_false_neg,
                 link_prior,
                 parameters_state_class,
                 links_state_class
@@ -306,8 +310,8 @@ class TermsBasedMarkovChain(ArrayMarkovChain):
             num_steps=NUM_STEPS,
             burn_in=BURN_IN,
             seed_links_indices=None,
-            alpha=None,
-            beta=None,
+            link_false_pos=None,
+            link_false_neg=None,
             link_prior=None,
             term_prior=None,
             state_recorder_class=recorders.TermsBasedStateRecorder,
@@ -329,10 +333,12 @@ class TermsBasedMarkovChain(ArrayMarkovChain):
           discarded until complete)
         - `seed_links_indices`: a user-defined seed of indices to
           links to start as selected
-        - `alpha`: the false-positive rate; see `PLNParametersState` for
-          more information
-        - `beta`: the false-negative rate; see `PLNParametersState` for
-          more information
+        - `link_false_pos`: the false-positive rate for links, the
+          portion of gene-gene interactions which were included, but
+          shouldn't have been
+        - `link_false_neg`: the false-negative rate for links, the
+          portion of gene-gene interactions which weren't included, but
+          should have been
         - `link_prior`: the assumed probability we would pick any one
           link as being active; see `PLNParametersState` for more
           information
@@ -352,8 +358,8 @@ class TermsBasedMarkovChain(ArrayMarkovChain):
                 active_gene_threshold,
                 transition_ratio,
                 seed_links_indices,
-                alpha=alpha,
-                beta=beta,
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
                 link_prior=link_prior,
                 term_prior=term_prior,
                 parameters_state_class=parameters_state_class,

@@ -303,11 +303,13 @@ class McmcArgParser(ExpressionBasedArgParser):
                     "%default]"
                 )
         )
-        self.cli_parser.add_option('--alpha', type='float',
-                help="designate the starting false positive rate"
+        self.cli_parser.add_option('--link-false-pos', type='float',
+                help=("designate the starting false-positive rate "
+                    "for links")
         )
-        self.cli_parser.add_option('--beta', type='float',
-                help="designate the starting false negative rate"
+        self.cli_parser.add_option('--link-false-neg', type='float',
+                help=("designate the starting false-negative rate "
+                    "for links")
         )
         self.cli_parser.add_option('--link-prior', type='float',
                 help=("designate the starting prior probability "
@@ -778,8 +780,8 @@ class McmcCli(ContextualCli):
                 burn_in=self.opts.burn_in,
                 steps=self.opts.steps,
                 activity_threshold=self.opts.activity_threshold,
-                alpha=self.opts.alpha,
-                beta=self.opts.beta,
+                link_false_pos=self.opts.link_false_pos,
+                link_false_neg=self.opts.link_false_neg,
                 link_prior=self.opts.link_prior,
                 term_prior=self.opts.term_prior,
                 seed_links=self.seed_links,

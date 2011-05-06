@@ -303,8 +303,8 @@ class DetailedArrayStateRecorder(ArrayStateRecorder):
         """
         state_info = {}
         parameters_state = overall_state.parameters_state
-        state_info['alpha'] = parameters_state.alpha
-        state_info['beta'] = parameters_state.beta
+        state_info['link_false_pos'] = parameters_state.link_false_pos
+        state_info['link_false_neg'] = parameters_state.link_false_neg
         state_info['link_prior'] = parameters_state.link_prior
         links_state = overall_state.links_state
         state_info['num_selected_links'] = \
@@ -403,8 +403,8 @@ class TermsBasedStateRecorder(DetailedArrayStateRecorder):
         """
         state_info = {}
         parameters_state = overall_state.parameters_state
-        state_info['alpha'] = parameters_state.alpha
-        state_info['beta'] = parameters_state.beta
+        state_info['link_false_pos'] = parameters_state.link_false_pos
+        state_info['link_false_neg'] = parameters_state.link_false_neg
         state_info['term_prior'] = parameters_state.term_prior
         state_info['link_prior'] = parameters_state.link_prior
         links_state = overall_state.links_state

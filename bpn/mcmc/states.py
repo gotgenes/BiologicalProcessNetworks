@@ -54,25 +54,25 @@ class PLNParametersState(State):
     function of the Process Linkage Network.
 
     """
-    parameter_names = ('alpha', 'beta', 'link_prior')
+    parameter_names = ('link_false_pos', 'link_false_neg', 'link_prior')
     # I'm mostly placing these here to get pylint to stop complaining
-    alpha = None
-    beta = None
+    link_false_pos = None
+    link_false_neg = None
     link_prior = None
-    # Now set the bounds for alpha (and beta)
-    _alpha_min = 0
-    _alpha_max = 1
+    # Now set the bounds for link_false_pos (and link_false_neg)
+    _link_false_pos_min = 0
+    _link_false_pos_max = 1
     # This controls how many discrete settings we can choose from for
     # the false-positive rate
-    _size_alpha_distribution = 19
-    _alpha_distribution = [0.05 * k for k in range(1,
-            _size_alpha_distribution + 1)]
+    _size_link_false_pos_distribution = 19
+    _link_false_pos_distribution = [0.05 * k for k in range(1,
+            _size_link_false_pos_distribution + 1)]
     if SUPERDEBUG_MODE:
-        logger.log(SUPERDEBUG, "Alpha distribution: %s" %
-                _alpha_distribution)
-    _beta_distribution = _alpha_distribution
-    _beta_min = _alpha_min
-    _beta_max = _alpha_max
+        logger.log(SUPERDEBUG, ("link_false_pos distribution: "
+                "{0}").format(_link_false_pos_distribution))
+    _link_false_neg_distribution = _link_false_pos_distribution
+    _link_false_neg_min = _link_false_pos_min
+    _link_false_neg_max = _link_false_pos_max
     # This controls the maximum number of discrete settings we can
     # choose from for the link prior rate
     _size_link_prior_distribution = 20
@@ -81,18 +81,20 @@ class PLNParametersState(State):
     def __init__(
             self,
             number_of_links,
-            alpha=None,
-            beta=None,
+            link_false_pos=None,
+            link_false_neg=None,
             link_prior=None
         ):
         """Create a new instance.
 
         :Parameters:
         - `number_of_links`: the total number of links being considered
-        - `alpha`: the false-positive rate, the portion of gene-gene
-          interactions which were included, but shouldn't have been
-        - `beta`: the false-negative rate, the portion of gene-gene
-          interactions which weren't included, but should have been
+        - `link_false_pos`: the false-positive rate for links, the
+          portion of gene-gene interactions which were included, but
+          shouldn't have been
+        - `link_false_neg`: the false-negative rate for links, the
+          portion of gene-gene interactions which weren't included, but
+          should have been
         - `link_prior`: the assumed probability we would select any one
           link
 
@@ -115,19 +117,26 @@ class PLNParametersState(State):
                     break
 
         if SUPERDEBUG_MODE:
-            logger.log(SUPERDEBUG, "link_prior_distribution: %s" %
-                    self._link_prior_distribution)
+            logger.log(SUPERDEBUG, ("link_prior_distribution: "
+                    "{0}").format(self._link_prior_distribution))
 
         # We know the entire parameter space, now.
-        self.parameter_space_size = len(self._alpha_distribution) + \
-                len(self._beta_distribution) + \
+        self.parameter_space_size = (
+                len(self._link_false_pos_distribution) +
+                len(self._link_false_neg_distribution) +
                 len(self._link_prior_distribution)
+        )
 
         # Set all parameters, if not set already, and validate them.
-        self._set_parameters_at_init(alpha, beta, link_prior)
-        logger.debug("Initial parameter settings: "
-                "alpha=%s, beta=%s, link_prior=%s" % (self.alpha,
-                    self.beta, self.link_prior)
+        self._set_parameters_at_init(
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
+                link_prior=link_prior
+        )
+        logger.debug(("Initial parameter settings: "
+                "link_false_pos={0}, link_false_neg={1}, "
+                "link_prior={2}").format(self.link_false_pos,
+                    self.link_false_neg, self.link_prior)
         )
 
         # This variable is used to store the previous state that the
@@ -153,25 +162,19 @@ class PLNParametersState(State):
         return (closest_index, closest_value)
 
 
-    def _set_parameters_at_init(self, alpha, beta, link_prior):
+    def _set_parameters_at_init(self, **params):
         """A helper function to verify and set the parameters at
         instantiation.
 
         :Parameters:
-        - `alpha`: the false-positive rate, the portion of gene-gene
-          interactions which were included, but shouldn't have been
-        - `beta`: the false-negative rate, the portion of gene-gene
-          interactions which weren't included, but should have been
-        - `link_prior`: the assumed probability we would select any one
-          link
+        - `**params`: the parameters to set
 
         """
-        given_values = locals()
         for param_name in self.parameter_names:
-            value = given_values[param_name]
-            param_distribution = getattr(self, '_%s_distribution' %
-                    param_name)
-            param_index_name = '_%s_index' % param_name
+            value = params[param_name]
+            param_distribution = getattr(self,
+                    '_{0}_distribution'.format(param_name))
+            param_index_name = '_{0}_index'.format(param_name)
             if value is None:
                 # The user did not define the value ahead of time;
                 # select one randomly
@@ -196,13 +199,12 @@ class PLNParametersState(State):
         `parameter`
 
         :Parameters:
-        - `parameter_name`: the name of the parameter, either `'alpha'`,
-          `'beta'`, or `'link_prior'`
+        - `parameter_name`: the name of the parameter
 
         """
-        param_index = getattr(self, '_%s_index' % parameter_name)
-        param_distribution = getattr(self, '_%s_distribution' %
-                parameter_name)
+        param_index = getattr(self, '_{0}_index'.format(parameter_name))
+        param_distribution = getattr(self, '_{0}_distribution'.format(
+                parameter_name))
         if param_index == 0:
             # The current index is at the minimum end of the
             # distribution; return only the next, higher index
@@ -240,7 +242,7 @@ class PLNParametersState(State):
         parameter_distributions = {}
         for param_name in self.parameter_names:
             parameter_distributions[param_name] = getattr(
-                    self, '_%s_distribution' % param_name)
+                    self, '_{0}_distribution'.format(param_name))
         return parameter_distributions
 
 
@@ -253,7 +255,8 @@ class PLNParametersState(State):
 
         """
         num_neighbors_per_parameter = {}
-        neighboring_indices = self._get_all_parameter_neighboring_indices()
+        neighboring_indices = (
+                self._get_all_parameter_neighboring_indices())
         for param_name, indices in neighboring_indices.items():
             num_neighbors_per_parameter[param_name] = len(indices)
         return num_neighbors_per_parameter
@@ -274,8 +277,8 @@ class PLNParametersState(State):
         selection of the parameter whose value will be changed.
 
         """
-        num_neighbors_per_param = \
-                self._calc_num_neighbors_per_parameter()
+        num_neighbors_per_param = (
+                self._calc_num_neighbors_per_parameter())
         # Although we could call self._calc_num_neighboring states, it
         # is more efficient to just sum those per neighbor, so we avoid
         # looping twice
@@ -292,8 +295,8 @@ class PLNParametersState(State):
         # index outside of the distribution
         cutoffs[-1] = 1
         if SUPERDEBUG_MODE:
-            logger.log(SUPERDEBUG, "Parameter selection random "
-                    "distribution: %s" % (cutoffs,))
+            logger.log(SUPERDEBUG, ("Parameter selection random "
+                    "distribution: {0}").format(cutoffs))
         return cutoffs
 
 
@@ -308,7 +311,8 @@ class PLNParametersState(State):
         # Now flip a coin to decide which parameter to change
         param_coin = random.random()
         if SUPERDEBUG_MODE:
-            logger.log(SUPERDEBUG, "Parameter coin: %s" % param_coin)
+            logger.log(SUPERDEBUG, "Parameter coin: {0}".format(
+                param_coin))
         cutoff_index = bisect.bisect_left(cutoffs, param_coin)
         parameter_to_alter = self.parameter_names[cutoff_index]
         return parameter_to_alter
@@ -322,20 +326,27 @@ class PLNParametersState(State):
         # should get (by picking the next index to use)
         neighboring_indices = self._get_parameter_neighboring_indices(
                 parameter_to_alter)
-        current_index = getattr(self, '_%s_index' % parameter_to_alter)
+        current_index = getattr(self, '_{0}_index'.format(
+                parameter_to_alter))
         new_index = random.choice(neighboring_indices)
         # Now set the parameter and its index in the new state
-        setattr(new_state, '_%s_index' % parameter_to_alter,
+        setattr(new_state, '_{0}_index'.format(parameter_to_alter),
                 new_index)
-        new_value = getattr(self, '_%s_distribution' %
-                parameter_to_alter)[new_index]
+        new_value = getattr(self, '_{0}_distribution'.format(
+                parameter_to_alter))[new_index]
         setattr(new_state, parameter_to_alter, new_value)
         new_state._delta = (parameter_to_alter, current_index)
-        logger.debug("Changing parameter %s from %s to %s\n"
-                "New state: alpha=%s, beta=%s, link_prior=%s" % (
-                parameter_to_alter, getattr(self, parameter_to_alter),
-                new_value, new_state.alpha, new_state.beta,
-                new_state.link_prior)
+        logger.debug("Changing parameter {0} from {1} to {2}\n".format(
+                    parameter_to_alter,
+                    getattr(self, parameter_to_alter),
+                    new_value
+                )
+        )
+        logger.debug(
+                ("New state: link_false_pos={0.link_false_pos}, "
+                    "link_false_neg={0.link_false_neg}, "
+                    "link_prior={0.link_prior}"
+                ).format(new_state)
         )
         return new_state
 
@@ -349,18 +360,20 @@ class RandomTransitionParametersState(PLNParametersState):
     def __init__(
             self,
             number_of_links,
-            alpha=None,
-            beta=None,
+            link_false_pos=None,
+            link_false_neg=None,
             link_prior=None
         ):
         """Create a new instance.
 
         :Parameters:
         - `number_of_links`: the total number of links being considered
-        - `alpha`: the false-positive rate, the portion of gene-gene
-          interactions which were included, but shouldn't have been
-        - `beta`: the false-negative rate, the portion of gene-gene
-          interactions which weren't included, but should have been
+        - `link_false_pos`: the false-positive rate for links, the
+          portion of gene-gene interactions which were included, but
+          shouldn't have been
+        - `link_false_neg`: the false-negative rate for links, the
+          portion of gene-gene interactions which weren't included, but
+          should have been
         - `link_prior`: the assumed probability we would select any one
           link
 
@@ -368,8 +381,8 @@ class RandomTransitionParametersState(PLNParametersState):
         super(RandomTransitionParametersState, self).__init__(
             self,
             number_of_links,
-            alpha=alpha,
-            beta=beta,
+            link_false_pos=link_false_pos,
+            link_false_neg=link_false_neg,
             link_prior=link_prior
         )
         # We'll use this as a cache of the cutoffs, since it will never
@@ -401,8 +414,10 @@ class RandomTransitionParametersState(PLNParametersState):
         """
         num_neighbors_per_parameter = {}
         for param_name in self.parameter_names:
-            num_other_values_in_distribution = (len(
-                    getattr(self, '_%s_distribution' % param_name)) - 1)
+            num_other_values_in_distribution = (
+                    len(getattr(self, '_{0}_distribution'.format(
+                        param_name))) - 1
+            )
             num_neighbors_per_parameter[param_name] = (
                     num_other_values_in_distribution)
         return num_neighbors_per_parameter
@@ -413,9 +428,10 @@ class RandomTransitionParametersState(PLNParametersState):
         new_state = self.copy()
         parameter_to_alter = self._choose_parameter_to_alter()
         parameter_distribution = getattr(self,
-                '_%s_distribution' % parameter_to_alter)
+                '_{0}_distribution'.format(parameter_to_alter))
         size_parameter_distribution = len(parameter_distribution)
-        current_index = getattr(self, '_%s_index' % parameter_to_alter)
+        current_index = getattr(self, '_{0}_index'.format(
+                parameter_to_alter))
         # Roll a die to get the new parameter index and value.
         new_index = random.randrange(size_parameter_distribution)
         # We could by random chance end up with the same index (and
@@ -424,16 +440,22 @@ class RandomTransitionParametersState(PLNParametersState):
         while new_index == current_index:
             new_index = random.randrange(size_parameter_distribution)
         # Now set the parameter and its index in the new state
-        setattr(new_state, '_%s_index' % parameter_to_alter,
+        setattr(new_state, '_{0}_index'.format(parameter_to_alter),
                 new_index)
         new_value = parameter_distribution[new_index]
         setattr(new_state, parameter_to_alter, new_value)
         new_state._delta = (parameter_to_alter, current_index)
-        logger.debug("Changing parameter %s from %s to %s\n"
-                "New state: alpha=%s, beta=%s, link_prior=%s" % (
-                parameter_to_alter, getattr(self, parameter_to_alter),
-                new_value, new_state.alpha, new_state.beta,
-                new_state.link_prior)
+        logger.debug("Changing parameter {0} from {1} to {2}\n".format(
+                    parameter_to_alter,
+                    getattr(self, parameter_to_alter),
+                    new_value
+                )
+        )
+        logger.debug(
+                ("New state: link_false_pos={0.link_false_pos}, "
+                    "link_false_neg={0.link_false_neg}, "
+                    "link_prior={0.link_prior}"
+                ).format(new_state)
         )
         return new_state
 
@@ -445,7 +467,7 @@ class TermPriorParametersState(RandomTransitionParametersState):
     Intended for use with `TermsAndLinksState`.
 
     """
-    parameter_names = ('alpha', 'beta', 'link_prior', 'term_prior')
+    parameter_names = ('link_false_pos', 'link_false_neg', 'link_prior', 'term_prior')
     # This controls the maximum number of discrete settings we can
     # choose from for the link prior rate
     _size_term_prior_distribution = 20
@@ -455,8 +477,8 @@ class TermPriorParametersState(RandomTransitionParametersState):
             self,
             number_of_links,
             number_of_terms,
-            alpha=None,
-            beta=None,
+            link_false_pos=None,
+            link_false_neg=None,
             link_prior=None,
             term_prior=None
         ):
@@ -465,10 +487,12 @@ class TermPriorParametersState(RandomTransitionParametersState):
         :Parameters:
         - `number_of_links`: the total number of links being considered
         - `number_of_terms`: the total number of terms being considered
-        - `alpha`: the false-positive rate, the portion of gene-gene
-          interactions which were included, but shouldn't have been
-        - `beta`: the false-negative rate, the portion of gene-gene
-          interactions which weren't included, but should have been
+        - `link_false_pos`: the false-positive rate for links, the
+          portion of gene-gene interactions which were included, but
+          shouldn't have been
+        - `link_false_neg`: the false-negative rate for links, the
+          portion of gene-gene interactions which weren't included, but
+          should have been
         - `link_prior`: the assumed probability we would select any one
           link
         - `term_prior`:the assumed probability we would select any one
@@ -494,8 +518,8 @@ class TermPriorParametersState(RandomTransitionParametersState):
                     break
 
         if SUPERDEBUG_MODE:
-            logger.log(SUPERDEBUG, "link_prior_distribution: %s" %
-                    self._link_prior_distribution)
+            logger.log(SUPERDEBUG, ("link_prior_distribution: "
+                    "{0}").format(self._link_prior_distribution))
 
         # We must first set up the term prior distribution; this cannot
         # be known beforehand, because it depends on knowing the number
@@ -515,16 +539,23 @@ class TermPriorParametersState(RandomTransitionParametersState):
                     break
 
         if SUPERDEBUG_MODE:
-            logger.log(SUPERDEBUG, "term_prior_distribution: %s" %
-                    self._term_prior_distribution)
+            logger.log(SUPERDEBUG, ("term_prior_distribution: "
+                    "{0}").format(self._term_prior_distribution))
 
         # Set all parameters, if not set already, and validate them.
-        self._set_parameters_at_init(alpha, beta, link_prior,
-                term_prior)
-        logger.debug("Initial parameter settings: "
-                "alpha=%s, beta=%s, link_prior=%s, term_prior=%s" % (
-                    self.alpha, self.beta, self.link_prior,
-                    self.term_prior
+        self._set_parameters_at_init(
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
+                link_prior=link_prior,
+                term_prior=term_prior
+        )
+        logger.debug(("Initial parameter settings: "
+                "link_false_pos={0}, link_false_neg={1}, "
+                "link_prior={2}, term_prior={3}").format(
+                    self.link_false_pos,
+                    self.link_false_neg,
+                    self.term_prior,
+                    self.link_prior
                 )
         )
 
@@ -535,47 +566,6 @@ class TermPriorParametersState(RandomTransitionParametersState):
         # containing the name of the parameter, and the index in the
         # distribution that it had previous to this state.
         self._delta = None
-
-
-    def _set_parameters_at_init(self, alpha, beta, link_prior,
-            term_prior):
-        """A helper function to verify and set the parameters at
-        instantiation.
-
-        :Parameters:
-        - `alpha`: the false-positive rate, the portion of gene-gene
-          interactions which were included, but shouldn't have been
-        - `beta`: the false-negative rate, the portion of gene-gene
-          interactions which weren't included, but should have been
-        - `link_prior`: the assumed probability we would select any one
-          link
-        - `term_prior`:the assumed probability we would select any one
-          term
-
-        """
-        given_values = locals()
-        for param_name in self.parameter_names:
-            value = given_values[param_name]
-            param_distribution = getattr(self, '_%s_distribution' %
-                    param_name)
-            param_index_name = '_%s_index' % param_name
-            if value is None:
-                # The user did not define the value ahead of time;
-                # select one randomly
-                rand_index = random.randrange(len(param_distribution))
-                # Set the index
-                setattr(self, param_index_name, rand_index)
-                # Set the value of the parameter
-                value = param_distribution[rand_index]
-                setattr(self, param_name, value)
-            else:
-                # The user defined this parameter.
-                # Get the value closest to this parameter.
-                param_index, param_value = (
-                        self._get_closest_parameter_index_and_value(
-                                value, param_distribution))
-                setattr(self, param_index_name, param_index)
-                setattr(self, param_name, param_value)
 
 
 class FixedDistributionParametersState(TermPriorParametersState):
@@ -593,8 +583,8 @@ class FixedDistributionParametersState(TermPriorParametersState):
             self,
             number_of_links,
             number_of_terms,
-            alpha=None,
-            beta=None,
+            link_false_pos=None,
+            link_false_neg=None,
             link_prior=None,
             term_prior=None
         ):
@@ -603,24 +593,32 @@ class FixedDistributionParametersState(TermPriorParametersState):
         :Parameters:
         - `number_of_links`: the total number of links being considered
         - `number_of_terms`: the total number of terms being considered
-        - `alpha`: the false-positive rate, the portion of gene-gene
-          interactions which were included, but shouldn't have been
-        - `beta`: the false-negative rate, the portion of gene-gene
-          interactions which weren't included, but should have been
+        - `link_false_pos`: the false-positive rate for links, the
+          portion of gene-gene interactions which were included, but
+          shouldn't have been
+        - `link_false_neg`: the false-negative rate for links, the
+          portion of gene-gene interactions which weren't included, but
+          should have been
         - `link_prior`: the assumed probability we would select any one
           link
         - `term_prior`:the assumed probability we would select any one
           term
 
-
         """
         # Set all parameters, if not set already, and validate them.
-        self._set_parameters_at_init(alpha, beta, link_prior,
-                term_prior)
-        logger.debug("Initial parameter settings: "
-                "alpha=%s, beta=%s, link_prior=%s, term_prior=%s" % (
-                    self.alpha, self.beta, self.link_prior,
-                    self.term_prior
+        self._set_parameters_at_init(
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
+                link_prior=link_prior,
+                term_prior=term_prior
+        )
+        logger.debug(("Initial parameter settings: "
+                "link_false_pos={0}, link_false_neg={1}, "
+                "link_prior={2}, term_prior={3}").format(
+                    self.link_false_pos,
+                    self.link_false_neg,
+                    self.term_prior,
+                    self.link_prior
                 )
         )
 
@@ -1737,8 +1735,8 @@ class PLNOverallState(State):
             active_gene_threshold,
             transition_ratio,
             seed_links=None,
-            alpha=None,
-            beta=None,
+            link_false_pos=None,
+            link_false_neg=None,
             link_prior=None,
             parameters_state_class=PLNParametersState
         ):
@@ -1753,9 +1751,9 @@ class PLNOverallState(State):
           transitions to parameter transitions
         - `seed_links`: a user-defined seed of links to start as
           selected
-        - `alpha`: the false-positive rate; see `PLNParametersState` for
+        - `link_false_pos`: the false-positive rate; see `PLNParametersState` for
           more information
-        - `beta`: the false-negative rate; see `PLNParametersState` for
+        - `link_false_neg`: the false-negative rate; see `PLNParametersState` for
           more information
         - `link_prior`: the assumed probability we would select any one
           link; see `PLNParametersState` for more information
@@ -1787,8 +1785,8 @@ class PLNOverallState(State):
         )
         self.parameters_state = parameters_state_class(
                 len(process_links),
-                alpha,
-                beta,
+                link_false_pos,
+                link_false_neg,
                 link_prior
         )
         self.transition_ratio = transition_ratio
@@ -1811,23 +1809,23 @@ class PLNOverallState(State):
                 self.links_state.calc_num_unselected_active_interactions()
         num_unselected_inactive_interactions = \
                 self.links_state.calc_num_unselected_inactive_interactions()
-        alpha = self.parameters_state.alpha
+        link_false_pos = self.parameters_state.link_false_pos
         log_unselected_probability = \
                 (num_unselected_active_interactions * \
-                math.log10(alpha)) + \
+                math.log10(link_false_pos)) + \
                 (num_unselected_inactive_interactions * \
-                math.log10(1 - alpha))
+                math.log10(1 - link_false_pos))
 
         num_selected_inactive_interactions = \
                 self.links_state.calc_num_selected_inactive_interactions()
         num_selected_active_interactions = \
                 self.links_state.calc_num_selected_active_interactions()
-        beta = self.parameters_state.beta
+        link_false_neg = self.parameters_state.link_false_neg
         log_selected_probability = \
                 (num_selected_inactive_interactions) * \
-                math.log10(beta) + \
+                math.log10(link_false_neg) + \
                 (num_selected_active_interactions * \
-                math.log10(1 - beta))
+                math.log10(1 - link_false_neg))
 
         log_prob_observed_given_selected = log_unselected_probability + \
                 log_selected_probability
@@ -1911,8 +1909,8 @@ class ArrayOverallState(PLNOverallState):
             active_gene_threshold,
             transition_ratio,
             seed_links_indices=None,
-            alpha=None,
-            beta=None,
+            link_false_pos=None,
+            link_false_neg=None,
             link_prior=None,
             parameters_state_class=PLNParametersState,
             links_state_class=ArrayLinksState
@@ -1928,9 +1926,9 @@ class ArrayOverallState(PLNOverallState):
           transitions to parameter transitions
         - `seed_links_indices`: a user-defined seed of indices to
           links to start as selected
-        - `alpha`: the false-positive rate; see `PLNParametersState` for
+        - `link_false_pos`: the false-positive rate; see `PLNParametersState` for
           more information
-        - `beta`: the false-negative rate; see `PLNParametersState` for
+        - `link_false_neg`: the false-negative rate; see `PLNParametersState` for
           more information
         - `link_prior`: the assumed probability we would select any one
           link; see `PLNParametersState` for more information
@@ -1961,8 +1959,8 @@ class ArrayOverallState(PLNOverallState):
         )
         self.parameters_state = parameters_state_class(
                 num_process_links,
-                alpha,
-                beta,
+                link_false_pos,
+                link_false_neg,
                 link_prior
         )
         self.transition_ratio = transition_ratio
@@ -1985,8 +1983,8 @@ class TermsBasedOverallState(ArrayOverallState):
             active_gene_threshold,
             transition_ratio,
             seed_links_indices=None,
-            alpha=None,
-            beta=None,
+            link_false_pos=None,
+            link_false_neg=None,
             link_prior=None,
             term_prior=None,
             parameters_state_class=TermPriorParametersState,
@@ -2003,9 +2001,9 @@ class TermsBasedOverallState(ArrayOverallState):
           transitions to parameter transitions
         - `seed_links_indices`: a user-defined seed of indices to
           links to start as selected
-        - `alpha`: the false-positive rate; see `PLNParametersState` for
+        - `link_false_pos`: the false-positive rate; see `PLNParametersState` for
           more information
-        - `beta`: the false-negative rate; see `PLNParametersState` for
+        - `link_false_neg`: the false-negative rate; see `PLNParametersState` for
           more information
         - `link_prior`: the assumed probability we would select any one
           link; see `PLNParametersState` for more information
@@ -2043,8 +2041,8 @@ class TermsBasedOverallState(ArrayOverallState):
         self.parameters_state = parameters_state_class(
                 num_process_links,
                 num_terms,
-                alpha=alpha,
-                beta=beta,
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
                 link_prior=link_prior,
                 term_prior=term_prior
         )

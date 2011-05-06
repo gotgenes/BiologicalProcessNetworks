@@ -368,8 +368,8 @@ class McmcInputData(BplnInputData):
             burn_in,
             steps,
             activity_threshold,
-            alpha,
-            beta,
+            link_false_pos,
+            link_false_neg,
             link_prior,
             term_prior,
             seed_links,
@@ -401,8 +401,8 @@ class McmcInputData(BplnInputData):
         - `steps`: the number of steps to record
         - `activity_threshold`: the threshold at which a gene is
           declared active
-        - `alpha`: the starting false positive rate
-        - `beta`: the starting false negative rate
+        - `link_false_pos`: the starting false positive rate
+        - `link_false_neg`: the starting false negative rate
         - `link_prior`: the starting probability of adding a link
         - `term_prior`: the starting probability of adding a term
         - `seed_links`: an iterable of annotation pairs to use as a seed
@@ -446,8 +446,8 @@ class McmcInputData(BplnInputData):
         self.burn_in = burn_in
         self.steps = steps
         self.activity_threshold = activity_threshold
-        self.alpha = alpha
-        self.beta = beta
+        self.link_false_pos = link_false_pos
+        self.link_false_neg = link_false_neg
         self.link_prior = link_prior
         self.term_prior = term_prior
         self.seed_links = seed_links
