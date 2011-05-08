@@ -1009,6 +1009,50 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
             # indicating a term has no intraterm interactions.
             self._intraterm_indices[term_index] = i + 1
 
+        # The idea here is that we want to create a linear data
+        # structure (list), where we index into this structure on some
+        # annotation term's index. The value at that index should be a
+        # list of indices. These indices will represent the genes
+        # annotated by the particular term represented by the term
+        # index.
+        #
+        # _genes will be our linearized list of genes, so we can
+        # get back to the gene names if necessary.
+        self._genes = self._annotations_dict.reverse_keys()
+        assert len(self._genes) == self.calc_num_genes()
+        # _genes_to_indices will represent a way to get a gene's index
+        # by the gene name.
+        self._genes_to_indices = dict((g, i) for (i, g) in
+                enumerate(self._genes))
+        # _terms_genes will be our list data structure by which we'll
+        # get the gene indices for a term represented by a particular
+        # index.
+        self._terms_genes = []
+        for term in named_terms:
+            annotated_genes = [self._genes_to_indices[gene] for gene in
+                    self._annotations_dict[term]]
+            self._terms_genes.append(annotated_genes)
+
+
+    def get_gene_index(self, gene):
+        """Returns the index of a gene.
+
+        :Parameters:
+        - `gene`: a gene name
+
+        """
+        return self._genes_to_indices[gene]
+
+
+    def get_gene_name(self, gene_index):
+        """Returns the name of a gene at a particular index.
+
+        :Parameters:
+        - `gene_index`: index of the gene of interest
+
+        """
+        return self._genes[gene_index]
+
 
     def get_term_index(self, term):
         """Returns the index of a single named term.
@@ -1062,6 +1106,16 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
         return (self.get_term_index(term1), self.get_term_index(term2))
 
 
+    def get_annotated_genes(self, term_index):
+        """Returns a `list` of gene indices annotated by a term.
+
+        :Parameters:
+        - `term_index`: index of the term of interest
+
+        """
+        return self._terms_genes[term_index]
+
+
     def get_intraterm_interactions(self, term):
         """Returns a `set` of all interactions for which the term
         annotates both interacting genes.
@@ -1075,6 +1129,32 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
         index = self._intraterm_indices[term]
         intraterm_interactions = self._intraterm_interactions[index]
         return intraterm_interactions
+
+
+    def get_active_genes(self, cutoff, greater=True):
+        """Returns a list of indices of all "active" genes: those for
+        which pass a cutoff for differential gene expression.
+
+        :Parameters:
+        - `cutoff`: a numerical threshold value for determining whether
+          a gene is active or not
+        - `greater`: if `True`, consider a gene "active" if its
+          differential expression value is greater than or equal to the
+          `cutoff`; if `False`, consider a gene "active" if its value is
+          less than or equal to the `cutoff`.
+
+        """
+        if greater:
+            active_genes_indices = [self._genes_to_indices[gene] for
+                    gene, vals in self._interactions_graph.node.items()
+                    if vals['weight'] >= cutoff
+            ]
+        else:
+            active_genes_indices = [self._genes_to_indices[gene] for
+                    gene, vals in self._interactions_graph.node.items()
+                    if vals['weight'] <= cutoff
+            ]
+        return active_genes_indices
 
 
     def get_coannotated_interactions(self, link_index):
