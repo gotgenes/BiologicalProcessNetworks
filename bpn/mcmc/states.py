@@ -554,8 +554,8 @@ class TermPriorParametersState(RandomTransitionParametersState):
                 "link_prior={2}, term_prior={3}").format(
                     self.link_false_pos,
                     self.link_false_neg,
-                    self.term_prior,
-                    self.link_prior
+                    self.link_prior,
+                    self.term_prior
                 )
         )
 
@@ -617,8 +617,8 @@ class FixedDistributionParametersState(TermPriorParametersState):
                 "link_prior={2}, term_prior={3}").format(
                     self.link_false_pos,
                     self.link_false_neg,
-                    self.term_prior,
-                    self.link_prior
+                    self.link_prior,
+                    self.term_prior
                 )
         )
 
