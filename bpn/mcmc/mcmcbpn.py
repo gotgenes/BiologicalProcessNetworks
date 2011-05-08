@@ -117,39 +117,58 @@ def main(argv=None):
                 input_data.transitions_outfile,
                 TERMS_BASED_TRANSITIONS_FIELDNAMES
         )
-        if input_data.independent_terms:
-            logger.info("Using independent-terms model.")
-            links_state_class = states.IndependentTermsAndLinksState
-        elif input_data.intraterms:
-            logger.info("Considering intra-term interactions.")
-            links_state_class = states.IntraTermsAndLinksState
-        else:
-            links_state_class = states.TermsAndLinksState
 
-        if input_data.fixed_distributions:
-            logger.info("Using fixed distributions for term and "
-                    "link prior.")
-            parameters_state_class = (
-                    states.FixedDistributionParametersState)
+        if input_data.genes_based:
+            logger.info("Using genes-based model.")
+            markov_chain = chains.GenesBasedMarkovChain(
+                    annotated_interactions,
+                    input_data.activity_threshold,
+                    input_data.transition_ratio,
+                    num_steps=input_data.steps,
+                    burn_in=input_data.burn_in,
+                    seed_links_indices=seed_links,
+                    link_false_pos=input_data.link_false_pos,
+                    link_false_neg=input_data.link_false_neg,
+                    link_prior=input_data.link_prior,
+                    term_false_pos=input_data.term_false_pos,
+                    term_false_neg=input_data.term_false_neg,
+                    term_prior=input_data.term_prior
+            )
         else:
-            parameters_state_class = (
-                    states.TermPriorParametersState)
+            if input_data.independent_terms:
+                logger.info("Using independent-terms model.")
+                links_state_class = (
+                        states.IndependentIntraTermsAndLinksState)
+            elif input_data.intraterms:
+                logger.info("Considering intra-term interactions.")
+                links_state_class = states.IntraTermsAndLinksState
+            else:
+                links_state_class = states.TermsAndLinksState
 
-        markov_chain = chains.TermsBasedMarkovChain(
-                annotated_interactions,
-                input_data.activity_threshold,
-                input_data.transition_ratio,
-                num_steps=input_data.steps,
-                burn_in=input_data.burn_in,
-                seed_links_indices=seed_links,
-                link_false_pos=input_data.link_false_pos,
-                link_false_neg=input_data.link_false_neg,
-                link_prior=input_data.link_prior,
-                term_prior=input_data.term_prior,
-                state_recorder_class=state_recorder_class,
-                parameters_state_class=parameters_state_class,
-                links_state_class=links_state_class,
-        )
+            if input_data.fixed_distributions:
+                logger.info("Using fixed distributions for term and "
+                        "link prior.")
+                parameters_state_class = (
+                        states.FixedDistributionParametersState)
+            else:
+                parameters_state_class = (
+                        states.TermPriorParametersState)
+
+            markov_chain = chains.TermsBasedMarkovChain(
+                    annotated_interactions,
+                    input_data.activity_threshold,
+                    input_data.transition_ratio,
+                    num_steps=input_data.steps,
+                    burn_in=input_data.burn_in,
+                    seed_links_indices=seed_links,
+                    link_false_pos=input_data.link_false_pos,
+                    link_false_neg=input_data.link_false_neg,
+                    link_prior=input_data.link_prior,
+                    term_prior=input_data.term_prior,
+                    state_recorder_class=state_recorder_class,
+                    parameters_state_class=parameters_state_class,
+                    links_state_class=links_state_class,
+            )
     else:
         if input_data.disable_swaps:
             logger.info("Disabling swap transitions.")

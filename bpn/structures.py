@@ -371,6 +371,8 @@ class McmcInputData(BplnInputData):
             link_false_pos,
             link_false_neg,
             link_prior,
+            term_false_pos,
+            term_false_neg,
             term_prior,
             seed_links,
             free_parameters,
@@ -379,6 +381,7 @@ class McmcInputData(BplnInputData):
             terms_based,
             intraterms,
             independent_terms,
+            genes_based,
             transition_ratio,
             terms_outfile,
             links_outfile,
@@ -404,6 +407,10 @@ class McmcInputData(BplnInputData):
         - `link_false_pos`: the starting false positive rate
         - `link_false_neg`: the starting false negative rate
         - `link_prior`: the starting probability of adding a link
+        - `term_false_pos`: the false-positive rate for terms, the
+          portion of genes which were included, but shouldn't have been
+        - `term_false_neg`: the false-negative rate for terms, the
+          portion of genes which weren't included, but should have been
         - `term_prior`: the starting probability of adding a term
         - `seed_links`: an iterable of annotation pairs to use as a seed
           when initializing the Markov chain.
@@ -417,9 +424,11 @@ class McmcInputData(BplnInputData):
           disabled, `False` otherwise.
         - `terms_based`: `True` if terms-based model is to be used,
           `False` otherwise
+        - `intraterms`: consider also intraterm interactions
         - `independent_terms`: `True` if selectable-terms based model is
           to be used, `False` otherwise
-        - `intraterms`: consider also intraterm interactions
+        - `genes_based`: `True` if overlaps of terms should be
+          considered through a genes-based model, `False` otherwise
         - `transition_ratio`: a `float` indicating the ratio of link
           transitions to parameter transitions
         - `terms_outfile`: file for output of terms results
@@ -449,13 +458,16 @@ class McmcInputData(BplnInputData):
         self.link_false_pos = link_false_pos
         self.link_false_neg = link_false_neg
         self.link_prior = link_prior
+        self.term_false_pos = term_false_pos
+        self.term_false_neg = term_false_neg
         self.term_prior = term_prior
         self.seed_links = seed_links
         self.free_parameters = free_parameters
         self.fixed_distributions = fixed_distributions
         self.disable_swaps = disable_swaps
-        self.terms_based = terms_based
         self.intraterms = intraterms
+        self.terms_based = terms_based
+        self.genes_based = genes_based
         self.independent_terms = independent_terms
         self.transition_ratio = transition_ratio
         self.terms_outfile = terms_outfile
@@ -1028,7 +1040,7 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
         # get the gene indices for a term represented by a particular
         # index.
         self._terms_genes = []
-        for term in named_terms:
+        for term in self._annotation_terms:
             annotated_genes = [self._genes_to_indices[gene] for gene in
                     self._annotations_dict[term]]
             self._terms_genes.append(annotated_genes)

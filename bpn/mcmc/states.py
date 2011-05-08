@@ -631,6 +631,82 @@ class FixedDistributionParametersState(TermPriorParametersState):
         self._delta = None
 
 
+class TermsParametersState(FixedDistributionParametersState):
+    parameter_names = ('link_false_pos', 'link_false_neg', 'link_prior',
+            'term_false_pos', 'term_false_neg', 'term_prior')
+    _term_false_pos_distribution = (
+            PLNParametersState._link_false_pos_distribution)
+    _term_false_pos_min = PLNParametersState._link_false_pos_min
+    _term_false_pos_max = PLNParametersState._link_false_pos_max
+    _term_false_neg_distribution = (
+            PLNParametersState._link_false_pos_distribution)
+    _term_false_neg_min = PLNParametersState._link_false_pos_min
+    _term_false_neg_max = PLNParametersState._link_false_pos_max
+
+    def __init__(
+            self,
+            number_of_links,
+            number_of_terms,
+            link_false_pos=None,
+            link_false_neg=None,
+            link_prior=None,
+            term_false_pos=None,
+            term_false_neg=None,
+            term_prior=None
+        ):
+        """Create a new instance.
+
+        :Parameters:
+        - `number_of_links`: the total number of links being considered
+        - `number_of_terms`: the total number of terms being considered
+        - `link_false_pos`: the false-positive rate for links, the
+          portion of gene-gene interactions which were included, but
+          shouldn't have been
+        - `link_false_neg`: the false-negative rate for links, the
+          portion of gene-gene interactions which weren't included, but
+          should have been
+        - `link_prior`: the assumed probability we would select any one
+          link
+        - `term_false_pos`: the false-positive rate for terms, the
+          portion of genes which were included, but shouldn't have been
+        - `term_false_neg`: the false-negative rate for terms, the
+          portion of genes which weren't included, but should have been
+        - `term_prior`: the assumed probability we would select any one
+          term
+        - `term_prior`:the assumed probability we would select any one
+          term
+
+        """
+        # Set all parameters, if not set already, and validate them.
+        self._set_parameters_at_init(
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
+                link_prior=link_prior,
+                term_false_pos=term_false_pos,
+                term_false_neg=term_false_neg,
+                term_prior=term_prior
+        )
+        logger.debug(("Initial parameter settings: "
+                "link_false_pos={0}, link_false_neg={1}, "
+                "link_prior={2}, term_false_pos={3}, "
+                "term_false_neg={4}, term_prior={5}").format(
+                    self.link_false_pos,
+                    self.link_false_neg,
+                    self.link_prior,
+                    self.term_false_pos,
+                    self.term_false_neg,
+                    self.term_prior,
+                )
+        )
+        self._parameter_selection_cutoffs = None
+
+        # This variable is used to store the previous state that the
+        # current state arrived from. When set, it should be a tuple
+        # containing the name of the parameter, and the index in the
+        # distribution that it had previous to this state.
+        self._delta = None
+
+
 class PLNLinksState(State):
     def __init__(
             self,
@@ -1578,8 +1654,8 @@ class IntraTermsAndLinksState(TermsAndLinksState):
                     intraterm_interactions)
 
 
-class IndependentTermsAndLinksState(IntraTermsAndLinksState):
-    """Similar to `IntraTermsAndLinksState`, but allowing terms to be
+class IndependentTermsAndLinksState(TermsAndLinksState):
+    """Similar to `TermsAndLinksState`, but allowing terms to be
     selected/unselected independent from link selection/unselection.
 
     """
@@ -1726,6 +1802,169 @@ class IndependentTermsAndLinksState(IntraTermsAndLinksState):
             new_state.unselect_link(transition[1])
 
         return new_state
+
+
+class IndependentIntraTermsAndLinksState(IndependentTermsAndLinksState,
+        IntraTermsAndLinksState):
+    """Similar to `IntraTermsAndLinksState`, but allowing terms to be
+    selected/unselected independent from link selection/unselection.
+
+    """
+    pass
+
+
+class GenesBasedTermsAndLinksState(IndependentTermsAndLinksState):
+    """Similar to `IndependentTermsAndLinksState`, but genes are used in
+    place of intraterm-interactions to assess overlap of selected terms.
+
+    """
+    def __init__(
+            self,
+            annotated_interactions,
+            seed_links_indices,
+            active_interactions,
+            active_genes
+        ):
+        """Create a new GenesBasedTermsAndLinksState instance
+
+        :Parameters:
+        - `annotated_interactions`: an `AnnotatedInteractions2dArray`
+          instance
+        - `seed_links_indices`: indices for the subset of links
+          being considered as "selected" initially in the process
+          linkage network
+        - `active_interactions`: a set of interactions that are
+          considered "active"
+        - `active_genes`: a list of genes considered "active"
+
+        """
+        self._num_genes = annotated_interactions.calc_num_genes()
+        self._num_active_genes = len(active_genes)
+        # Keeps track of the number of genes annotated by one or more
+        # selected terms.
+        self._num_selected_genes = 0
+        # Keeps track of the number of active genes annotated by one or
+        # more selected terms.
+        self._num_selected_active_genes = 0
+        # Stores the number of selected terms by which a gene is
+        # annotated.
+        self._gene_selection_counts = numpy.zeros(self._num_genes)
+        # Use this array to look up whether a gene is active or
+        # inactive.
+        self._active_genes = numpy.zeros(self._num_genes, bool)
+        self._active_genes[numpy.array(active_genes)] = True
+
+        super(GenesBasedTermsAndLinksState, self).__init__(
+                annotated_interactions,
+                seed_links_indices,
+                active_interactions
+        )
+
+
+    def copy(self):
+        """Create a copy of this state instance."""
+        newcopy = super(GenesBasedTermsAndLinksState, self).copy()
+        newcopy._gene_selection_counts = (
+                self._gene_selection_counts.copy())
+        return newcopy
+
+
+    def _mark_genes_selected(self, genes):
+        """Marks genes as being selected by a term.
+
+        """
+        for gene in genes:
+            self._gene_selection_counts[gene] += 1
+            # If this is the first time selecting this gene, increment
+            # the count.
+            if self._gene_selection_counts[gene] == 1:
+                self._num_selected_genes += 1
+                # Further, if this gene is active, increase the active
+                # count.
+                if self._active_genes[gene]:
+                    self._num_selected_active_genes += 1
+
+
+    def _mark_genes_unselected(self, genes):
+        """Unmarks genes as being selected by a term.
+
+        """
+        for gene in genes:
+            self._gene_selection_counts[gene] -= 1
+            # If we have removed the only term which selected this gene,
+            # decrement the selection count.
+            if not self._gene_selection_counts[gene]:
+                self._num_selected_genes -= 1
+                # Further, if this gene was active, decrement that
+                # count.
+                if self._active_genes[gene]:
+                    self._num_selected_active_genes -= 1
+
+
+    def select_term(self, term):
+        """Mark a term as selected (again)."""
+        super(GenesBasedTermsAndLinksState, self).select_term(term)
+        term_genes = self._annotated_interactions.get_annotated_genes(
+                term)
+        self._mark_genes_selected(term_genes)
+
+
+    def unselect_term(self, term):
+        """Unmark a term as selected (again)."""
+        super(GenesBasedTermsAndLinksState, self).unselect_term(term)
+        term_genes = self._annotated_interactions.get_annotated_genes(
+                term)
+        self._mark_genes_unselected(term_genes)
+
+
+    def calc_num_selected_genes(self):
+        """Returns the number of genes covered by at least one
+        selected term.
+
+        """
+        return self._num_selected_genes
+
+
+    def calc_num_unselected_genes(self):
+        """Returns the number of genes covered by no selected
+        term.
+
+        """
+        return self._num_genes - self._num_selected_genes
+
+
+    def calc_num_selected_active_genes(self):
+        """Returns the number of active genes covered by at least
+        one selected term.
+
+        """
+        return self._num_selected_active_genes
+
+
+    def calc_num_unselected_active_genes(self):
+        """Returns the number of active genes covered by no
+        selected term.
+
+        """
+        return self._num_active_genes - self._num_selected_active_genes
+
+
+    def calc_num_selected_inactive_genes(self):
+        """Returns the number of inactive genes covered by at
+        least one selected term.
+
+        """
+        return (self._num_selected_genes -
+                self._num_selected_active_genes)
+
+
+    def calc_num_unselected_inactive_genes(self):
+        """Returns the number of inactive genes covered by no
+        selected term.
+
+        """
+        return (self.calc_num_unselected_genes() -
+                self.calc_num_unselected_active_genes())
 
 
 class PLNOverallState(State):
@@ -2086,4 +2325,136 @@ class TermsBasedOverallState(ArrayOverallState):
         log_prob_selected = (terms_log_prob_selected +
                 links_log_prob_selected)
         return log_prob_selected
+
+
+class GenesBasedOverallState(TermsBasedOverallState):
+    """Similar to `TermsBasedOverallState`, but with genes being the
+    measure of overlap between terms.
+
+    """
+    def __init__(
+            self,
+            annotated_interactions,
+            active_gene_threshold,
+            transition_ratio,
+            seed_links_indices=None,
+            link_false_pos=None,
+            link_false_neg=None,
+            link_prior=None,
+            term_false_pos=None,
+            term_false_neg=None,
+            term_prior=None,
+            parameters_state_class=TermsParametersState,
+            links_state_class=GenesBasedTermsAndLinksState
+        ):
+        """Create a new instance.
+
+        :Parameters:
+        - `annotated_interactions`: an `AnnotatedInteractionsArray`
+          instance
+        - `active_gene_threshold`: the threshold at or above which a
+          gene is considered "active"
+        - `transition_ratio`: a `float` indicating the ratio of link
+          transitions to parameter transitions
+        - `seed_links_indices`: a user-defined seed of indices to
+          links to start as selected
+        - `link_false_pos`: the false-positive rate for links, the
+          portion of gene-gene interactions which were included, but
+          shouldn't have been
+        - `link_false_neg`: the false-negative rate for links, the
+          portion of gene-gene interactions which weren't included, but
+          should have been
+        - `link_prior`: the assumed probability we would select any one
+          link; see `PLNParametersState` for more information
+        - `term_false_pos`: the false-positive rate for terms, the
+          portion of genes which were included, but shouldn't have been
+        - `term_false_neg`: the false-negative rate for terms, the
+          portion of genes which weren't included, but should have been
+        - `term_prior`:the assumed probability we would select any one
+          term; see `RandomTransitionParametersState` for more
+          information
+        - `parameters_state_class`: the class of the parameters state to
+          use [default: `TermsParametersState`]
+        - `links_state_class`: the class of the links state to use
+          [default: `GenesBasedTermsAndLinksState`]
+
+        """
+        num_process_links = annotated_interactions.calc_num_links()
+        num_terms = annotated_interactions.calc_num_terms()
+
+        logger.info("Determining active genes.")
+        active_genes = annotated_interactions.get_active_genes(
+                active_gene_threshold)
+        logger.info("Determining active interactions.")
+        active_interactions = (
+                annotated_interactions.get_active_interactions(
+                        active_gene_threshold
+                )
+        )
+        self.links_state = links_state_class(
+                annotated_interactions,
+                seed_links_indices,
+                active_interactions,
+                active_genes
+        )
+        self.parameters_state = parameters_state_class(
+                num_process_links,
+                num_terms,
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
+                link_prior=link_prior,
+                term_false_pos=term_false_pos,
+                term_false_neg=term_false_neg,
+                term_prior=term_prior
+        )
+        self.transition_ratio = transition_ratio
+        self._delta = None
+
+
+    def calc_log_prob_terms_selected(self):
+        """Calculates the log base 10 of the probability that the number
+        of terms selected would be as large as they are given the term
+        prior.
+
+        """
+        num_selected_terms = self.links_state.calc_num_selected_terms()
+        num_unselected_terms = (
+                self.links_state.calc_num_unselected_terms())
+        term_prior = self.parameters_state.term_prior
+        log_prob_selected = (
+                (num_selected_terms * math.log10(term_prior)) +
+                (num_unselected_terms * math.log10(1 - term_prior))
+        )
+
+        num_unselected_active_genes = (
+                self.links_state.calc_num_unselected_active_genes())
+        num_unselected_inactive_genes = (
+                self.links_state.calc_num_unselected_inactive_genes())
+        term_false_pos = self.parameters_state.term_false_pos
+        log_unselected_probability = (
+                (num_unselected_active_genes *
+                    math.log10(term_false_pos)) +
+                (num_unselected_inactive_genes *
+                    math.log10(1 - term_false_pos))
+        )
+
+        num_selected_inactive_genes = (
+                self.links_state.calc_num_selected_inactive_genes())
+        num_selected_active_genes = (
+                self.links_state.calc_num_selected_active_genes())
+        term_false_neg = self.parameters_state.term_false_neg
+        log_selected_probability = (
+                (num_selected_inactive_genes *
+                    math.log10(term_false_neg)) +
+                (num_selected_active_genes *
+                    math.log10(1 - term_false_neg))
+        )
+
+        log_prob_observed_given_selected = (log_unselected_probability +
+                log_selected_probability)
+
+        log_prob_terms_selected = (log_prob_selected +
+                log_prob_observed_given_selected)
+
+        return log_prob_terms_selected
 

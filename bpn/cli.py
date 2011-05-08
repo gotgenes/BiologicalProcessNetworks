@@ -315,6 +315,18 @@ class McmcArgParser(ExpressionBasedArgParser):
                 help=("designate the starting prior probability "
                     "for adding a link")
         )
+        self.cli_parser.add_option('--term-false-pos', type='float',
+                help=("designate the starting false-positive rate "
+                    "for terms [NOTE: applies only when used in "
+                    "conjunction with '--genes-based']"
+                )
+        )
+        self.cli_parser.add_option('--term-false-neg', type='float',
+                help=("designate the starting false-negative rate "
+                    "for terms [NOTE: applies only when used in "
+                    "conjunction with '--genes-based']"
+                )
+        )
         self.cli_parser.add_option('--term-prior', type='float',
                 help=("designate the starting prior probability "
                     "for adding a term [NOTE: applies only when used "
@@ -356,6 +368,8 @@ class McmcArgParser(ExpressionBasedArgParser):
                     "--terms-based']"
                 )
         )
+        self.cli_parser.add_option('--genes-based', action='store_true',
+                help="overlap of terms is based on genes")
         self.cli_parser.add_option('--parameters-outfile',
                 default=mcmc.defaults.PARAMETERS_OUTFILE,
                 help=("the file to which the parameters results should "
@@ -783,6 +797,8 @@ class McmcCli(ContextualCli):
                 link_false_pos=self.opts.link_false_pos,
                 link_false_neg=self.opts.link_false_neg,
                 link_prior=self.opts.link_prior,
+                term_false_pos=self.opts.term_false_pos,
+                term_false_neg=self.opts.term_false_neg,
                 term_prior=self.opts.term_prior,
                 seed_links=self.seed_links,
                 free_parameters=self.opts.free_parameters,
@@ -791,6 +807,7 @@ class McmcCli(ContextualCli):
                 terms_based=self.opts.terms_based,
                 intraterms=self.opts.intraterms,
                 independent_terms=self.opts.independent_terms,
+                genes_based=self.opts.genes_based,
                 transition_ratio=self.opts.transition_ratio,
                 terms_outfile=self.terms_outfile,
                 links_outfile=self.links_outfile,
