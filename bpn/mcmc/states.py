@@ -1539,7 +1539,7 @@ class IntraTermsAndLinksState(TermsAndLinksState):
         """Create a new IntraTermsAndLinksState instance
 
         :Parameters:
-        - `annotated_interactions`: an `IntratermInteractions2dArray`
+        - `annotated_interactions`: an `AnnotatedInteractions2dArray`
           instance
         - `seed_links_indices`: indices for the subset of links
           being considered as "selected" initially in the process

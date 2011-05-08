@@ -78,20 +78,12 @@ def main(argv=None):
     logger.info("Constructing supporting data structures; this may "
             "take a while...")
     if input_data.terms_based:
-        if input_data.intraterms:
-            annotated_interactions = (
-                    bpn.structures.IntratermInteractions2dArray(
-                            input_data.interactions_graph,
-                            input_data.annotations_dict
-                    )
-            )
-        else:
-            annotated_interactions = (
-                    bpn.structures.AnnotatedInteractions2dArray(
-                            input_data.interactions_graph,
-                            input_data.annotations_dict
-                    )
-            )
+        annotated_interactions = (
+                bpn.structures.AnnotatedInteractions2dArray(
+                        input_data.interactions_graph,
+                        input_data.annotations_dict
+                )
+        )
     else:
         annotated_interactions = (
                 bpn.structures.AnnotatedInteractionsArray(

@@ -1120,31 +1120,3 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
                     numpy.triu(self._links_to_interactions).nonzero()[0])
         return self._num_annotation_pairs
 
-
-class IntratermInteractions2dArray(AnnotatedInteractions2dArray):
-    """Similar to `AnnotatedInteractions2dArray`, but with support for
-    intraterm interactions.
-
-    Additional changes include the following:
-
-    - Annotation terms are stored in a list
-    - ``self._links`` becomes a list of tuples of integers, rather than
-      tuples of strings (the actual terms), meaning there's an
-      additional level of indirection to get the actual terms
-
-    """
-    def _post_process_structures(self):
-        super(IntratermInteractions2dArray,
-                self)._post_process_structures()
-        # Convert the intraterm interactions from a dictionary to a
-        # list, so that the index for the term indexes into the
-        # intraterm interactions.
-        self._intraterm_interactions = [
-                self._intraterm_interactions.get(term, None) for term in
-                self._annotation_terms
-        ]
-
-    # Note that get_intraterm_interactions() inherited from
-    # AnnotatedInteractionsGraph should still work fine; since we'll be
-    # passing it an index.
-
