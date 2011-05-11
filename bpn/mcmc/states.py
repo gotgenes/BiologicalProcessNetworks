@@ -1078,19 +1078,19 @@ class ArrayLinksState(PLNLinksState):
     def __init__(
             self,
             annotated_interactions,
-            seed_links_indices,
-            active_interactions
+            active_interactions,
+            seed_links_indices=None
         ):
         """Create a new ArrayLinksState instance
 
         :Parameters:
         - `annotated_interactions`: an `AnnotatedInteractionsArray`
           instance
+        - `active_interactions`: a set of interactions that are
+          considered "active"
         - `seed_links_indices`: indices for the subset of links
           being considered as "selected" initially in the process
           linkage network
-        - `active_interactions`: a set of interactions that are
-          considered "active"
 
         """
         self._annotated_interactions = annotated_interactions
@@ -1106,9 +1106,20 @@ class ArrayLinksState(PLNLinksState):
         # represented by that index has been selected, or `False` if the
         # link is unselected.
         self.link_selections = numpy.zeros(self._num_links, numpy.bool)
-        for index in seed_links_indices:
-            self.select_link(index)
+        self._process_seed_links(seed_links_indices)
         self._delta = None
+
+
+    def _process_seed_links(self, seed_links=None):
+        """Adds seed links to the network.
+
+        If no seed links are provided, it will select one legitimate
+        link, uniformly at random, to add.
+
+        """
+        if seed_links is not None:
+            for index in seed_links:
+                self.select_link(index)
 
 
     def select_link(self, index):
@@ -1338,19 +1349,19 @@ class TermsAndLinksState(NoSwapArrayLinksState):
     def __init__(
             self,
             annotated_interactions,
-            seed_links_indices,
-            active_interactions
+            active_interactions,
+            seed_links_indices=None
         ):
         """Create a new ArrayLinksState instance
 
         :Parameters:
         - `annotated_interactions`: an `AnnotatedInteractions2dArray`
           instance
+        - `active_interactions`: a set of interactions that are
+          considered "active"
         - `seed_links_indices`: indices for the subset of links
           being considered as "selected" initially in the process
           linkage network
-        - `active_interactions`: a set of interactions that are
-          considered "active"
 
         """
         self._annotated_interactions = annotated_interactions
@@ -1380,29 +1391,7 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         # index has been selected, or `False` otherwise.
         self.term_selections = numpy.zeros(self._num_terms, bool)
 
-        if seed_links_indices:
-            for index in seed_links_indices:
-                # Make sure at least one of the terms is selected before
-                # attempting to select the link, so we don't raise an
-                # error.
-                if not self.term_selections[index[0]]:
-                    self.select_term(index[0])
-                self.select_link(index)
-        #else:
-            ## We have to have at least one link selected.
-            #interactions = None
-            #random_term1 = None
-            #random_term2 = None
-            #while (random_term1 == random_term2) or (interactions is
-                    #None):
-                #random_term1 = random.randrange(self._num_terms)
-                #random_term2 = random.randrange(self._num_terms)
-                #interactions = (
-                        #self._annotated_interactions.get_coannotated_interactions(
-                            #(random_term1, random_term2))
-                #)
-            #self.select_term(random_term1)
-            #self.select_link((random_term1, random_term2))
+        self._process_seed_links(seed_links_indices)
 
         self._delta = None
 
@@ -1416,6 +1405,38 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         newcopy._interaction_selection_counts = (
                 self._interaction_selection_counts.copy())
         return newcopy
+
+
+    def _process_seed_links(self, seed_links=None):
+        """Adds seed links to the network.
+
+        If no seed links are provided, it will select one legitimate
+        link, uniformly at random, to add.
+
+        """
+        if seed_links is not None:
+            for index in seed_links:
+                # Make sure at least one of the terms is selected before
+                # attempting to select the link, so we don't raise an
+                # error.
+                if not self.term_selections[index[0]]:
+                    self.select_term(index[0])
+                self.select_link(index)
+        else:
+            # We have to have at least one link selected.
+            interactions = None
+            random_term1 = None
+            random_term2 = None
+            while (random_term1 == random_term2) or (interactions is
+                    None):
+                random_term1 = random.randrange(self._num_terms)
+                random_term2 = random.randrange(self._num_terms)
+                interactions = (
+                        self._annotated_interactions.get_coannotated_interactions(
+                            (random_term1, random_term2))
+                )
+            self.select_term(random_term1)
+            self.select_link((random_term1, random_term2))
 
 
     def calc_num_neighboring_states(self):
@@ -1609,8 +1630,8 @@ class IntraTermsAndLinksState(TermsAndLinksState):
     def __init__(
             self,
             annotated_interactions,
-            seed_links_indices,
-            active_interactions
+            active_interactions,
+            seed_links_indices=None
         ):
         """Create a new IntraTermsAndLinksState instance
 
@@ -1626,8 +1647,8 @@ class IntraTermsAndLinksState(TermsAndLinksState):
         """
         super(IntraTermsAndLinksState, self).__init__(
                 annotated_interactions,
-                seed_links_indices,
-                active_interactions
+                active_interactions,
+                seed_links_indices=seed_links_indices
         )
 
 
@@ -1659,14 +1680,21 @@ class IndependentTermsAndLinksState(TermsAndLinksState):
     selected/unselected independent from link selection/unselection.
 
     """
-    #def _unselect_terms_via_link(self, link):
-        #for term in link:
-            ## Decrement the link count.
-            #self._term_links_counts[term] -= 1
-            #assert self._term_links_counts[term] >= 0, ("Term {0} "
-                    #"reached a negative links count!").format(term)
-            ## Note that we do not unselect the term here, even if its
-            ## links count reaches 0.
+    def _process_seed_links(self, seed_links=None):
+        """Adds seed links to the network.
+
+        If no seed links are provided, it will select one legitimate
+        link, uniformly at random, to add.
+
+        """
+        if seed_links is not None:
+            for index in seed_links:
+                # Make sure at least one of the terms is selected before
+                # attempting to select the link, so we don't raise an
+                # error.
+                if not self.term_selections[index[0]]:
+                    self.select_term(index[0])
+                self.select_link(index)
 
 
     def _calc_num_terms_based_transitions(self):
@@ -1821,21 +1849,21 @@ class GenesBasedTermsAndLinksState(IndependentTermsAndLinksState):
     def __init__(
             self,
             annotated_interactions,
-            seed_links_indices,
             active_interactions,
-            active_genes
+            active_genes,
+            seed_links_indices=None
         ):
         """Create a new GenesBasedTermsAndLinksState instance
 
         :Parameters:
         - `annotated_interactions`: an `AnnotatedInteractions2dArray`
           instance
-        - `seed_links_indices`: indices for the subset of links
-          being considered as "selected" initially in the process
-          linkage network
         - `active_interactions`: a set of interactions that are
           considered "active"
         - `active_genes`: a list of genes considered "active"
+        - `seed_links_indices`: indices for the subset of links
+          being considered as "selected" initially in the process
+          linkage network
 
         """
         self._num_genes = annotated_interactions.calc_num_genes()
@@ -1856,8 +1884,8 @@ class GenesBasedTermsAndLinksState(IndependentTermsAndLinksState):
 
         super(GenesBasedTermsAndLinksState, self).__init__(
                 annotated_interactions,
-                seed_links_indices,
-                active_interactions
+                active_interactions,
+                seed_links_indices=seed_links_indices
         )
 
 
@@ -2001,13 +2029,6 @@ class PLNOverallState(State):
 
         """
         process_links = annotated_interactions.get_all_links()
-        ## Choose some sample of the process links to be selected
-        ## initially, if none have been provided
-        #if seed_links is None:
-            ## NOTE: It's important process_links be a list for this step,
-            ## because random.sample doesn't work on sets
-            #seed_links = random.sample(process_links,
-                    #random.randrange(len(process_links) + 1))
         # We need to convert process links into a set, now.
         process_links = frozenset(process_links)
         # Next, figure out which interactions are active
@@ -2018,9 +2039,9 @@ class PLNOverallState(State):
         )
         self.links_state = PLNLinksState(
                 process_links,
-                seed_links,
                 annotated_interactions,
-                active_interactions
+                active_interactions,
+                seed_links
         )
         self.parameters_state = parameters_state_class(
                 len(process_links),
@@ -2178,13 +2199,6 @@ class ArrayOverallState(PLNOverallState):
 
         """
         num_process_links = annotated_interactions.calc_num_links()
-        #if seed_links_indices is None:
-            ## Note that we're randomly selecting a random number of
-            ## indices here.
-            #seed_links_indices = random.sample(
-                    #range(num_process_links),
-                    #random.randrange(num_process_links + 1)
-            #)
         # Next, figure out which interactions are active
         logger.info("Determining active interactions.")
         active_interactions = \
@@ -2193,8 +2207,8 @@ class ArrayOverallState(PLNOverallState):
         )
         self.links_state = links_state_class(
                 annotated_interactions,
-                seed_links_indices,
-                active_interactions
+                active_interactions,
+                seed_links_indices
         )
         self.parameters_state = parameters_state_class(
                 num_process_links,
@@ -2260,12 +2274,6 @@ class TermsBasedOverallState(ArrayOverallState):
         num_process_links = annotated_interactions.calc_num_links()
         num_terms = annotated_interactions.calc_num_terms()
 
-        #if seed_links_indices is None:
-            #seed_links_indices = random.sample(
-                    #annotated_interactions.get_all_links(),
-                    #random.randrange(num_process_links)
-            #)
-
         # Next, figure out which interactions are active
         logger.info("Determining active interactions.")
         active_interactions = \
@@ -2274,8 +2282,8 @@ class TermsBasedOverallState(ArrayOverallState):
         )
         self.links_state = links_state_class(
                 annotated_interactions,
-                seed_links_indices,
-                active_interactions
+                active_interactions,
+                seed_links_indices
         )
         self.parameters_state = parameters_state_class(
                 num_process_links,
@@ -2393,9 +2401,9 @@ class GenesBasedOverallState(TermsBasedOverallState):
         )
         self.links_state = links_state_class(
                 annotated_interactions,
-                seed_links_indices,
                 active_interactions,
-                active_genes
+                active_genes,
+                seed_links_indices
         )
         self.parameters_state = parameters_state_class(
                 num_process_links,
