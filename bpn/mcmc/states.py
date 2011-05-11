@@ -120,13 +120,6 @@ class PLNParametersState(State):
             logger.log(SUPERDEBUG, ("link_prior_distribution: "
                     "{0}").format(self._link_prior_distribution))
 
-        # We know the entire parameter space, now.
-        self.parameter_space_size = (
-                len(self._link_false_pos_distribution) +
-                len(self._link_false_neg_distribution) +
-                len(self._link_prior_distribution)
-        )
-
         # Set all parameters, if not set already, and validate them.
         self._set_parameters_at_init(
                 link_false_pos=link_false_pos,
@@ -288,8 +281,6 @@ class PLNParametersState(State):
         for param_name in self.parameter_names:
             num_neighbors = num_neighbors_per_param[param_name]
             running_total += float(num_neighbors) / total_num_neighbors
-            if running_total > 1:
-                running_total = 1
             cutoffs.append(running_total)
         # The last cutoff should be at 1, so that we don't try and
         # index outside of the distribution
@@ -460,6 +451,55 @@ class RandomTransitionParametersState(PLNParametersState):
         return new_state
 
 
+class FixedDistributionParametersState(RandomTransitionParametersState):
+    """Similar to `RandomTransitionParametersState`, but with a fixed
+    distribution for the link prior.
+
+    """
+    # Gives a range [0.025, 0.5], inclusive.
+    _link_prior_distribution = [0.025 * k for k in range(1, 21)]
+    def __init__(
+            self,
+            number_of_links,
+            link_false_pos=None,
+            link_false_neg=None,
+            link_prior=None,
+        ):
+        """Create a new instance.
+
+        :Parameters:
+        - `number_of_links`: the total number of links being considered
+        - `link_false_pos`: the false-positive rate for links, the
+          portion of gene-gene interactions which were included, but
+          shouldn't have been
+        - `link_false_neg`: the false-negative rate for links, the
+          portion of gene-gene interactions which weren't included, but
+          should have been
+        - `link_prior`: the assumed probability we would select any one
+          link
+
+        """
+        # Set all parameters, if not set already, and validate them.
+        self._set_parameters_at_init(
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
+                link_prior=link_prior
+        )
+        logger.debug(("Initial parameter settings: "
+                "link_false_pos={0}, link_false_neg={1}, "
+                "link_prior={2}").format(
+                    self.link_false_pos,
+                    self.link_false_neg,
+                    self.link_prior
+                )
+        )
+
+        self._parameter_selection_cutoffs = None
+
+        self._delta = None
+
+
+
 class TermPriorParametersState(RandomTransitionParametersState):
     """Similar to `RandomTransitionParametersState`, but includes an
     extra parameter, the term prior probability.
@@ -568,14 +608,14 @@ class TermPriorParametersState(RandomTransitionParametersState):
         self._delta = None
 
 
-class FixedDistributionParametersState(TermPriorParametersState):
+class FixedTermPriorParametersState(TermPriorParametersState):
     """Similar to `TermPriorParametersState`, but with fixed
     distributions for the term and link priors.
 
     """
-    # Gives a range [0.025, 0.5], inclusive.
-    _term_prior_distribution = [0.025 * k for k in range(1, 21)]
-    _link_prior_distribution = _term_prior_distribution
+    _link_prior_distribution = (
+            FixedDistributionParametersState._link_prior_distribution)
+    _term_prior_distribution = _link_prior_distribution
     if SUPERDEBUG_MODE:
         logger.log(SUPERDEBUG, "Term prior distribution: %s" %
                 _term_prior_distribution)
@@ -631,7 +671,7 @@ class FixedDistributionParametersState(TermPriorParametersState):
         self._delta = None
 
 
-class TermsParametersState(FixedDistributionParametersState):
+class TermsParametersState(FixedTermPriorParametersState):
     parameter_names = ('link_false_pos', 'link_false_neg', 'link_prior',
             'term_false_pos', 'term_false_neg', 'term_prior')
     _term_false_pos_distribution = (
