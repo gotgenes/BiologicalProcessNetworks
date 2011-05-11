@@ -104,7 +104,16 @@ def main(argv=None):
     else:
         seed_links = None
 
-    if input_data.free_parameters:
+    if input_data.fixed_distributions:
+        logger.info("Using fixed distributions for all parameters.")
+        if input_data.terms_based:
+            parameters_state_class = states.FixedTermPriorParametersState
+        else:
+            parameters_state_class = (
+                    states.FixedDistributionParametersState)
+    elif input_data.terms_based:
+        parameters_state_class = states.TermPriorParametersState
+    elif input_data.free_parameters:
         logger.info("Using free parameter transitions.")
         parameters_state_class = states.RandomTransitionParametersState
     else:
@@ -119,7 +128,7 @@ def main(argv=None):
         )
 
         if input_data.genes_based:
-            logger.info("Using genes-based model.")
+            logger.info("Assessing term overlap through genes.")
             markov_chain = chains.GenesBasedMarkovChain(
                     annotated_interactions,
                     input_data.activity_threshold,
@@ -144,15 +153,6 @@ def main(argv=None):
                 links_state_class = states.IntraTermsAndLinksState
             else:
                 links_state_class = states.TermsAndLinksState
-
-            if input_data.fixed_distributions:
-                logger.info("Using fixed distributions for term and "
-                        "link prior.")
-                parameters_state_class = (
-                        states.FixedDistributionParametersState)
-            else:
-                parameters_state_class = (
-                        states.TermPriorParametersState)
 
             markov_chain = chains.TermsBasedMarkovChain(
                     annotated_interactions,
