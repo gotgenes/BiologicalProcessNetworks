@@ -374,6 +374,7 @@ class McmcInputData(BplnInputData):
             term_false_pos,
             term_false_neg,
             term_prior,
+            seed_terms,
             seed_links,
             free_parameters,
             fixed_distributions,
@@ -412,8 +413,10 @@ class McmcInputData(BplnInputData):
         - `term_false_neg`: the false-negative rate for terms, the
           portion of genes which weren't included, but should have been
         - `term_prior`: the starting probability of adding a term
+        - `seed_terms`: an iterable of annotation terms to be used as a
+          seed when initializing the Markov chain
         - `seed_links`: an iterable of annotation pairs to use as a seed
-          when initializing the Markov chain.
+          when initializing the Markov chain
         - `free_parameters`: `True` if parameters are free take a random
           value from their distribution, `False` if they may only take
           adjoining values
@@ -461,6 +464,7 @@ class McmcInputData(BplnInputData):
         self.term_false_pos = term_false_pos
         self.term_false_neg = term_false_neg
         self.term_prior = term_prior
+        self.seed_terms = seed_terms
         self.seed_links = seed_links
         self.free_parameters = free_parameters
         self.fixed_distributions = fixed_distributions

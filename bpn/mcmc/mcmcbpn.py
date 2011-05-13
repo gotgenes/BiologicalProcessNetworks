@@ -127,6 +127,17 @@ def main(argv=None):
                 TERMS_BASED_TRANSITIONS_FIELDNAMES
         )
 
+        if input_data.independent_terms or input_data.genes_based:
+            if input_data.seed_terms:
+                seed_terms = [
+                        annotated_interactions.get_term_index(term) for
+                        term in input_data.seed_terms
+                ]
+            else:
+                seed_terms = None
+        #else:
+            #seed_terms = None
+
         if input_data.genes_based:
             logger.info("Assessing term overlap through genes.")
             markov_chain = chains.GenesBasedMarkovChain(
@@ -135,40 +146,55 @@ def main(argv=None):
                     input_data.transition_ratio,
                     num_steps=input_data.steps,
                     burn_in=input_data.burn_in,
+                    seed_terms_indices=seed_terms,
                     seed_links_indices=seed_links,
                     link_false_pos=input_data.link_false_pos,
                     link_false_neg=input_data.link_false_neg,
                     link_prior=input_data.link_prior,
                     term_false_pos=input_data.term_false_pos,
                     term_false_neg=input_data.term_false_neg,
-                    term_prior=input_data.term_prior
+                    term_prior=input_data.term_prior,
             )
         else:
             if input_data.independent_terms:
                 logger.info("Using independent-terms model.")
-                links_state_class = (
-                        states.IndependentIntraTermsAndLinksState)
-            elif input_data.intraterms:
-                logger.info("Considering intra-term interactions.")
-                links_state_class = states.IntraTermsAndLinksState
+                markov_chain = chains.IndependentTermsBasedMarkovChain(
+                        annotated_interactions,
+                        input_data.activity_threshold,
+                        input_data.transition_ratio,
+                        num_steps=input_data.steps,
+                        burn_in=input_data.burn_in,
+                        seed_terms_indices=seed_terms,
+                        seed_links_indices=seed_links,
+                        link_false_pos=input_data.link_false_pos,
+                        link_false_neg=input_data.link_false_neg,
+                        link_prior=input_data.link_prior,
+                        term_prior=input_data.term_prior,
+                        state_recorder_class=state_recorder_class,
+                        parameters_state_class=parameters_state_class
+                )
             else:
-                links_state_class = states.TermsAndLinksState
+                if input_data.intraterms:
+                    logger.info("Considering intra-term interactions.")
+                    links_state_class = states.IntraTermsAndLinksState
+                else:
+                    links_state_class = states.TermsAndLinksState
 
-            markov_chain = chains.TermsBasedMarkovChain(
-                    annotated_interactions,
-                    input_data.activity_threshold,
-                    input_data.transition_ratio,
-                    num_steps=input_data.steps,
-                    burn_in=input_data.burn_in,
-                    seed_links_indices=seed_links,
-                    link_false_pos=input_data.link_false_pos,
-                    link_false_neg=input_data.link_false_neg,
-                    link_prior=input_data.link_prior,
-                    term_prior=input_data.term_prior,
-                    state_recorder_class=state_recorder_class,
-                    parameters_state_class=parameters_state_class,
-                    links_state_class=links_state_class,
-            )
+                markov_chain = chains.TermsBasedMarkovChain(
+                        annotated_interactions,
+                        input_data.activity_threshold,
+                        input_data.transition_ratio,
+                        num_steps=input_data.steps,
+                        burn_in=input_data.burn_in,
+                        seed_links_indices=seed_links,
+                        link_false_pos=input_data.link_false_pos,
+                        link_false_neg=input_data.link_false_neg,
+                        link_prior=input_data.link_prior,
+                        term_prior=input_data.term_prior,
+                        state_recorder_class=state_recorder_class,
+                        parameters_state_class=parameters_state_class,
+                        links_state_class=links_state_class,
+                )
     else:
         if input_data.disable_swaps:
             logger.info("Disabling swap transitions.")
@@ -203,6 +229,13 @@ def main(argv=None):
                 links_state_class=links_state_class,
         )
 
+    logger.debug("""\
+Chain information:
+    Chain class: {chain.__class__}
+    Overall class: {chain.current_state.__class__}
+    Links class: {chain.current_state.links_state.__class__}
+    Parameters class: {chain.current_state.parameters_state.__class__}\
+""".format(chain=markov_chain))
     logger.info("Beginning to run through states in the chain. This "
             "may take a while...")
     markov_chain.run()

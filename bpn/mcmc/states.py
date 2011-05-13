@@ -1720,13 +1720,44 @@ class IndependentTermsAndLinksState(TermsAndLinksState):
     selected/unselected independent from link selection/unselection.
 
     """
-    def _process_seed_links(self, seed_links=None):
-        """Adds seed links to the network.
+    def __init__(
+            self,
+            annotated_interactions,
+            active_interactions,
+            seed_terms_indices=None,
+            seed_links_indices=None
+        ):
+        """Create a new IntraTermsAndLinksState instance
 
-        If no seed links are provided, it will select one legitimate
-        link, uniformly at random, to add.
+        :Parameters:
+        - `annotated_interactions`: an `AnnotatedInteractions2dArray`
+          instance
+        - `active_interactions`: a set of interactions that are
+          considered "active"
+        - `seed_terms_indices`: indices for the subset of terms being
+          considered as "selected" initially
+        - `seed_links_indices`: indices for the subset of links
+          being considered as "selected" initially
 
         """
+        super(IndependentTermsAndLinksState, self).__init__(
+                annotated_interactions,
+                active_interactions,
+                seed_links_indices=seed_links_indices
+        )
+        self._process_seed_terms(seed_terms_indices)
+        self._delta = None
+
+
+    def _process_seed_terms(self, seed_terms=None):
+        """Adds seed terms to the network."""
+        if seed_terms is not None:
+            for index in seed_terms:
+                self.select_term(index)
+
+
+    def _process_seed_links(self, seed_links=None):
+        """Adds seed links to the network."""
         if seed_links is not None:
             for index in seed_links:
                 # Make sure at least one of the terms is selected before
@@ -1891,6 +1922,7 @@ class GenesBasedTermsAndLinksState(IndependentTermsAndLinksState):
             annotated_interactions,
             active_interactions,
             active_genes,
+            seed_terms_indices=None,
             seed_links_indices=None
         ):
         """Create a new GenesBasedTermsAndLinksState instance
@@ -1901,6 +1933,8 @@ class GenesBasedTermsAndLinksState(IndependentTermsAndLinksState):
         - `active_interactions`: a set of interactions that are
           considered "active"
         - `active_genes`: a list of genes considered "active"
+        - `seed_terms_indices`: indices for the subset of terms being
+          considered as "selected" initially
         - `seed_links_indices`: indices for the subset of links
           being considered as "selected" initially in the process
           linkage network
@@ -1925,6 +1959,7 @@ class GenesBasedTermsAndLinksState(IndependentTermsAndLinksState):
         super(GenesBasedTermsAndLinksState, self).__init__(
                 annotated_interactions,
                 active_interactions,
+                seed_terms_indices=seed_terms_indices,
                 seed_links_indices=seed_links_indices
         )
 
@@ -2309,8 +2344,6 @@ class TermsBasedOverallState(ArrayOverallState):
           [default: `TermsAndLinksState`]
 
         """
-        # Warning: Copy-and-pasted and modified from
-        # ArrayOverallState.__init__().
         num_process_links = annotated_interactions.calc_num_links()
         num_terms = annotated_interactions.calc_num_terms()
 
@@ -2323,7 +2356,7 @@ class TermsBasedOverallState(ArrayOverallState):
         self.links_state = links_state_class(
                 annotated_interactions,
                 active_interactions,
-                seed_links_indices
+                seed_links_indices=seed_links_indices
         )
         self.parameters_state = parameters_state_class(
                 num_process_links,
@@ -2375,6 +2408,82 @@ class TermsBasedOverallState(ArrayOverallState):
         return log_prob_selected
 
 
+class IndependentTermsBasedOverallState(TermsBasedOverallState):
+    """Similar to `ArrayOverallState`, but incorporating annotation
+    terms into the likelihood function.
+
+    """
+    def __init__(
+            self,
+            annotated_interactions,
+            active_gene_threshold,
+            transition_ratio,
+            seed_terms_indices=None,
+            seed_links_indices=None,
+            link_false_pos=None,
+            link_false_neg=None,
+            link_prior=None,
+            term_prior=None,
+            parameters_state_class=TermPriorParametersState,
+            links_state_class=IndependentTermsAndLinksState
+        ):
+        """Create a new instance.
+
+        :Parameters:
+        - `annotated_interactions`: an `AnnotatedInteractionsArray`
+          instance
+        - `active_gene_threshold`: the threshold at or above which a
+          gene is considered "active"
+        - `transition_ratio`: a `float` indicating the ratio of link
+          transitions to parameter transitions
+        - `seed_links_indices`: a user-defined seed of indices to
+          links to start as selected
+        - `link_false_pos`: the false-positive rate; see `PLNParametersState` for
+          more information
+        - `link_false_neg`: the false-negative rate; see `PLNParametersState` for
+          more information
+        - `link_prior`: the assumed probability we would select any one
+          link; see `PLNParametersState` for more information
+        - `term_prior`:the assumed probability we would select any one
+          term; see `RandomTransitionParametersState` for more
+          information
+        - `parameters_state_class`: the class of the parameters state to
+          use [default: `TermPriorParametersState`]
+        - `links_state_class`: the class of the links state to use
+          [default: `IndependentTermsAndLinksState`]
+
+        """
+        num_process_links = annotated_interactions.calc_num_links()
+        num_terms = annotated_interactions.calc_num_terms()
+
+        logger.info("Determining active interactions.")
+        active_interactions = (
+                annotated_interactions.get_active_interactions(
+                        active_gene_threshold)
+        )
+        self.links_state = links_state_class(
+                annotated_interactions,
+                active_interactions,
+                seed_terms_indices=seed_terms_indices,
+                seed_links_indices=seed_links_indices
+        )
+        self.parameters_state = parameters_state_class(
+                num_process_links,
+                num_terms,
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
+                link_prior=link_prior,
+                term_prior=term_prior
+        )
+        self.transition_ratio = transition_ratio
+        # This is used to track how we arrived at the current state from
+        # the previous one. It is `None` for the first state, but for
+        # any new created states, it is set to the `_delta` attribute of
+        # either the `links_state` or the `parameters_state`, depending
+        # on which was used for the transition.
+        self._delta = None
+
+
 class GenesBasedOverallState(TermsBasedOverallState):
     """Similar to `TermsBasedOverallState`, but with genes being the
     measure of overlap between terms.
@@ -2385,6 +2494,7 @@ class GenesBasedOverallState(TermsBasedOverallState):
             annotated_interactions,
             active_gene_threshold,
             transition_ratio,
+            seed_terms_indices=None,
             seed_links_indices=None,
             link_false_pos=None,
             link_false_neg=None,

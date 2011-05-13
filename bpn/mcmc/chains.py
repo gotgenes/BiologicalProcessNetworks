@@ -309,6 +309,7 @@ class TermsBasedMarkovChain(ArrayMarkovChain):
             transition_ratio,
             num_steps=NUM_STEPS,
             burn_in=BURN_IN,
+            seed_terms_indices=None,
             seed_links_indices=None,
             link_false_pos=None,
             link_false_neg=None,
@@ -357,7 +358,7 @@ class TermsBasedMarkovChain(ArrayMarkovChain):
                 annotated_interactions,
                 active_gene_threshold,
                 transition_ratio,
-                seed_links_indices,
+                seed_links_indices=seed_links_indices,
                 link_false_pos=link_false_pos,
                 link_false_neg=link_false_neg,
                 link_prior=link_prior,
@@ -375,7 +376,89 @@ class TermsBasedMarkovChain(ArrayMarkovChain):
         self.last_transition_info = None
 
 
-class GenesBasedMarkovChain(ArrayMarkovChain):
+class IndependentTermsBasedMarkovChain(TermsBasedMarkovChain):
+    """A Markov chain based on states that consider both term and link
+    selections.
+
+    """
+    def __init__(
+            self,
+            annotated_interactions,
+            active_gene_threshold,
+            transition_ratio,
+            num_steps=NUM_STEPS,
+            burn_in=BURN_IN,
+            seed_terms_indices=None,
+            seed_links_indices=None,
+            link_false_pos=None,
+            link_false_neg=None,
+            link_prior=None,
+            term_prior=None,
+            state_recorder_class=recorders.TermsBasedStateRecorder,
+            parameters_state_class=states.TermPriorParametersState,
+            links_state_class=states.IndependentIntraTermsAndLinksState
+        ):
+        """Create a new instance.
+
+        :Parameters:
+        - `annotated_interactions`: an `AnnotatedInteractionsArray`
+          instance
+        - `active_gene_threshold`: the threshold at or above which a
+          gene is considered "active"
+        - `transition_ratio`: a `float` indicating the ratio of link
+          transitions to parameter transitions
+        - `num_steps`: the number of steps to take in the Markov chain
+        - `burn_in`: the number of steps to take before recording state
+          information about the Markov chain (state records are
+          discarded until complete)
+        - `seed_terms_indices`: indices for the subset of terms being
+          considered as "selected" initially
+        - `seed_links_indices`: a user-defined seed of indices to
+          links to start as selected
+        - `link_false_pos`: the false-positive rate for links, the
+          portion of gene-gene interactions which were included, but
+          shouldn't have been
+        - `link_false_neg`: the false-negative rate for links, the
+          portion of gene-gene interactions which weren't included, but
+          should have been
+        - `link_prior`: the assumed probability we would pick any one
+          link as being active; see `PLNParametersState` for more
+          information
+        - `term_prior`:the assumed probability we would select any one
+          term; see `RandomTransitionParametersState` for more
+          information
+        - `state_recorder_class`: the class of the state recorder to use
+          [default: `recorders.TermsStateRecorder`]
+        - `parameters_state_class`: the class of the parameters state to
+          use [default: `states.TermPriorParametersState`]
+        - `links_state_class`: the class of the links state to use
+          [default: `states.IndependentIntraTermsAndLinksState`]
+
+        """
+        self.current_state = states.IndependentTermsBasedOverallState(
+                annotated_interactions,
+                active_gene_threshold,
+                transition_ratio,
+                seed_terms_indices=seed_terms_indices,
+                seed_links_indices=seed_links_indices,
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
+                link_prior=link_prior,
+                term_prior=term_prior,
+                parameters_state_class=parameters_state_class,
+                links_state_class=links_state_class
+        )
+        self.state_recorder = state_recorder_class(
+                annotated_interactions,
+                self.current_state.parameters_state.get_parameter_distributions()
+        )
+        self.burn_in_steps = burn_in
+        self.num_steps = num_steps
+        self.burn_in_period = True
+        self.last_transition_info = None
+
+
+class GenesBasedMarkovChain(IndependentTermsBasedMarkovChain):
     """A Markov chain based on states that consider both term and link
     selections, where overlap is based on genes.
 
@@ -387,6 +470,7 @@ class GenesBasedMarkovChain(ArrayMarkovChain):
             transition_ratio,
             num_steps=NUM_STEPS,
             burn_in=BURN_IN,
+            seed_terms_indices=None,
             seed_links_indices=None,
             link_false_pos=None,
             link_false_neg=None,
@@ -411,6 +495,8 @@ class GenesBasedMarkovChain(ArrayMarkovChain):
         - `burn_in`: the number of steps to take before recording state
           information about the Markov chain (state records are
           discarded until complete)
+        - `seed_terms_indices`: indices for the subset of terms being
+          considered as "selected" initially
         - `seed_links_indices`: a user-defined seed of indices to
           links to start as selected
         - `link_false_pos`: the false-positive rate for links, the
@@ -441,7 +527,8 @@ class GenesBasedMarkovChain(ArrayMarkovChain):
                 annotated_interactions,
                 active_gene_threshold,
                 transition_ratio,
-                seed_links_indices,
+                seed_terms_indices=seed_terms_indices,
+                seed_links_indices=seed_links_indices,
                 link_false_pos=link_false_pos,
                 link_false_neg=link_false_neg,
                 link_prior=link_prior,

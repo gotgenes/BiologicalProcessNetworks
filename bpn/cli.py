@@ -333,6 +333,10 @@ class McmcArgParser(ExpressionBasedArgParser):
                     "in conjunction with '--terms-based'"
                 )
         )
+        self.cli_parser.add_option('--seed-terms',
+                help=("A file containing terms, one per line to "
+                    "use as a seed when initializing the Markov chain.")
+        )
         self.cli_parser.add_option('--seed-links',
                 help=("A two-column CSV-formatted file containing "
                     "pairs of terms to use as seed for links when "
@@ -750,6 +754,13 @@ class McmcCli(ContextualCli):
 
     def _process_input_files(self):
         super(McmcCli, self)._process_input_files()
+        if self.opts.seed_terms:
+            logger.info("Parsing seed terms from {0}.".format(
+                    self.opts.seed_terms))
+            seed_terms_file = open(self.opts.seed_terms)
+            self.seed_terms = [line.strip() for line in seed_terms_file]
+        else:
+            self.seed_terms = None
         if self.opts.seed_links:
             logger.info("Parsing seed links from {0}.".format(
                     self.opts.seed_links))
@@ -800,6 +811,7 @@ class McmcCli(ContextualCli):
                 term_false_pos=self.opts.term_false_pos,
                 term_false_neg=self.opts.term_false_neg,
                 term_prior=self.opts.term_prior,
+                seed_terms=self.seed_terms,
                 seed_links=self.seed_links,
                 free_parameters=self.opts.free_parameters,
                 fixed_distributions=self.opts.fixed_distributions,
