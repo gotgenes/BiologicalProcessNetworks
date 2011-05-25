@@ -88,8 +88,8 @@ class PLNMarkovChain(MarkovChain):
 
         )
         self.state_recorder = state_recorder_class(
-                self.current_state.links_state.process_links,
-                self.current_state.parameters_state.get_parameter_distributions()
+                annotated_interactions,
+                self.current_state.parameters_state.get_parameter_distributions(),
         )
         self.burn_in_steps = burn_in
         self.num_steps = num_steps
@@ -152,6 +152,7 @@ class PLNMarkovChain(MarkovChain):
         # If the proposed state is more likely, we want to go ahead and
         # accept it.
         if log_transition_ratio > 0:
+            log_rejection_prob = None
             self.current_state = proposed_state
             logger.debug("Accepted proposed state.")
             accepted = True
@@ -183,7 +184,8 @@ class PLNMarkovChain(MarkovChain):
                 proposed_transition_type,
                 log_transition_ratio,
                 log_state_likelihood,
-                accepted
+                accepted,
+                log_rejection_prob
         )
 
 
@@ -288,8 +290,8 @@ class ArrayMarkovChain(PLNMarkovChain):
                 links_state_class
         )
         self.state_recorder = state_recorder_class(
-                annotated_interactions.get_all_links(),
-                self.current_state.parameters_state.get_parameter_distributions()
+                annotated_interactions,
+                self.current_state.parameters_state.get_parameter_distributions(),
         )
         self.burn_in_steps = burn_in
         self.num_steps = num_steps
@@ -478,7 +480,7 @@ class GenesBasedMarkovChain(IndependentTermsBasedMarkovChain):
             term_false_pos=None,
             term_false_neg=None,
             term_prior=None,
-            state_recorder_class=recorders.TermsBasedStateRecorder,
+            state_recorder_class=recorders.GenesBasedStateRecorder,
             parameters_state_class=states.TermsParametersState,
             links_state_class=states.GenesBasedTermsAndLinksState
         ):
@@ -516,7 +518,7 @@ class GenesBasedMarkovChain(IndependentTermsBasedMarkovChain):
           term; see `RandomTransitionParametersState` for more
           information
         - `state_recorder_class`: the class of the state recorder to use
-          [default: `recorders.TermsStateRecorder`]
+          [default: `recorders.GenesBasedStateRecorder`]
         - `parameters_state_class`: the class of the parameters state to
           use [default: `states.TermsParametersState`]
         - `links_state_class`: the class of the links state to use

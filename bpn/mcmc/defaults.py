@@ -41,7 +41,8 @@ TRANSITIONS_FIELDNAMES = [
         'transition_type',
         'log_transition_ratio',
         'log_state_likelihood',
-        'accepted'
+        'accepted',
+        'log_rejection_prob'
 ]
 DETAILED_TRANSITIONS_FIELDNAMES = TRANSITIONS_FIELDNAMES + [
         'link_false_pos',
@@ -62,7 +63,23 @@ TERMS_BASED_FIELDS = [
         'num_selected_terms',
         'num_unselected_terms'
 ]
-TERMS_BASED_TRANSITIONS_FIELDNAMES.insert(6, TERMS_BASED_FIELDS[0])
-TERMS_BASED_TRANSITIONS_FIELDNAMES[8:8] = TERMS_BASED_FIELDS[1:]
+TERMS_BASED_TRANSITIONS_FIELDNAMES[10:10] = TERMS_BASED_FIELDS[1:]
+INDEPENDENT_TERMS_BASED_TRANSITIONS_FIELDNAMES = (
+        TERMS_BASED_TRANSITIONS_FIELDNAMES[:])
+INDEPENDENT_TERMS_BASED_TRANSITIONS_FIELDNAMES.insert(10,
+        TERMS_BASED_FIELDS[0])
+
+GENES_BASED_TRANSITIONS_FIELDNAMES = (
+        INDEPENDENT_TERMS_BASED_TRANSITIONS_FIELDNAMES + [
+            'num_selected_active_genes',
+            'num_selected_inactive_genes',
+            'num_unselected_active_genes',
+            'num_unselected_inactive_genes'
+        ])
+
+GENES_BASED_TRANSITIONS_FIELDNAMES[10:10] = [
+        'term_false_pos',
+        'term_false_neg',
+]
 
 TERMS_FIELDNAMES = ('term', 'probability')

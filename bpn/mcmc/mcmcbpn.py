@@ -30,7 +30,9 @@ from defaults import (
         TRANSITIONS_FIELDNAMES,
         DETAILED_TRANSITIONS_FIELDNAMES,
         TERMS_BASED_TRANSITIONS_FIELDNAMES,
-        TERMS_FIELDNAMES
+        TERMS_FIELDNAMES,
+        INDEPENDENT_TERMS_BASED_TRANSITIONS_FIELDNAMES,
+        GENES_BASED_TRANSITIONS_FIELDNAMES
 )
 
 # Configure all the logging stuff
@@ -121,11 +123,6 @@ def main(argv=None):
 
     if input_data.terms_based:
         logger.info("Using terms-based model.")
-        state_recorder_class = recorders.TermsBasedStateRecorder
-        transitions_csvfile = convutils.make_csv_dict_writer(
-                input_data.transitions_outfile,
-                TERMS_BASED_TRANSITIONS_FIELDNAMES
-        )
 
         if input_data.independent_terms or input_data.genes_based:
             if input_data.seed_terms:
@@ -139,6 +136,10 @@ def main(argv=None):
             #seed_terms = None
 
         if input_data.genes_based:
+            transitions_csvfile = convutils.make_csv_dict_writer(
+                    input_data.transitions_outfile,
+                    GENES_BASED_TRANSITIONS_FIELDNAMES
+            )
             logger.info("Assessing term overlap through genes.")
             markov_chain = chains.GenesBasedMarkovChain(
                     annotated_interactions,
@@ -157,6 +158,10 @@ def main(argv=None):
             )
         else:
             if input_data.independent_terms:
+                transitions_csvfile = convutils.make_csv_dict_writer(
+                        input_data.transitions_outfile,
+                        INDEPENDENT_TERMS_BASED_TRANSITIONS_FIELDNAMES
+                )
                 logger.info("Using independent-terms model.")
                 markov_chain = chains.IndependentTermsBasedMarkovChain(
                         annotated_interactions,
@@ -170,10 +175,14 @@ def main(argv=None):
                         link_false_neg=input_data.link_false_neg,
                         link_prior=input_data.link_prior,
                         term_prior=input_data.term_prior,
-                        state_recorder_class=state_recorder_class,
+                        state_recorder_class=recorders.IndependentTermsBasedStateRecorder,
                         parameters_state_class=parameters_state_class
                 )
             else:
+                transitions_csvfile = convutils.make_csv_dict_writer(
+                        input_data.transitions_outfile,
+                        TERMS_BASED_TRANSITIONS_FIELDNAMES
+                )
                 if input_data.intraterms:
                     logger.info("Considering intra-term interactions.")
                     links_state_class = states.IntraTermsAndLinksState
@@ -191,7 +200,6 @@ def main(argv=None):
                         link_false_neg=input_data.link_false_neg,
                         link_prior=input_data.link_prior,
                         term_prior=input_data.term_prior,
-                        state_recorder_class=state_recorder_class,
                         parameters_state_class=parameters_state_class,
                         links_state_class=links_state_class,
                 )

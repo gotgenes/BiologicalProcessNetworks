@@ -9,6 +9,7 @@
 
 """State recorders for BPN states."""
 
+import collections
 
 import numpy
 
@@ -19,6 +20,323 @@ from bpn import structures
 from defaults import SUPERDEBUG, SUPERDEBUG_MODE
 
 
+# This is a bit of a hack to reduce memory usage of the records. Rather
+# than create a new string for every transition detailing the type, this
+# will allow just creating a reference to a string.
+TRANSITION_TYPES = {
+        'link_prior': 'link_prior',
+        'link_false_pos': 'link_false_pos',
+        'link_false_neg': 'link_false_neg',
+        'term_prior': 'term_prior',
+        'term_false_pos': 'term_false_pos',
+        'term_false_neg': 'term_false_neg',
+        'link_selection': 'link_selection',
+        'link_unselection': 'link_unselection',
+        'link_swap': 'link_swap',
+        'term_selection': 'term_selection',
+        'term_unselection': 'term_unselection',
+}
+
+SELECTION = 'selection'
+UNSELECTION = 'unselection'
+
+
+class OverallStateRecord(object):
+    __slots__ = (
+            'transition_type',
+            'log_transition_ratio',
+            'log_state_likelihood',
+            'accepted',
+            'log_rejection_prob'
+    )
+
+    def __init__(
+            self,
+            transition_type,
+            log_transition_ratio,
+            log_state_likelihood,
+            accepted,
+            log_rejection_prob
+        ):
+        self.transition_type = TRANSITION_TYPES[transition_type]
+        self.log_transition_ratio = log_transition_ratio
+        self.log_state_likelihood = log_state_likelihood
+        self.accepted = accepted
+        self.log_rejection_prob = log_rejection_prob
+
+
+    def to_dict(self):
+        """Converts the record to a dictionary for output."""
+        d = {
+                'transition_type': self.transition_type,
+                'log_transition_ratio': self.log_transition_ratio,
+                'log_state_likelihood': self.log_state_likelihood,
+                'accepted': self.accepted,
+                'log_rejection_prob': self.log_rejection_prob,
+        }
+        return d
+
+
+class DetailedStateRecord(OverallStateRecord):
+    __slots__ = (
+            'link_false_pos',
+            'link_false_neg',
+            'link_prior',
+            'num_selected_links',
+            'num_unselected_links',
+            'num_selected_active_interactions',
+            'num_selected_inactive_interactions',
+            'num_unselected_active_interactions',
+            'num_unselected_inactive_interactions'
+    )
+
+    def __init__(
+            self,
+            transition_type,
+            log_transition_ratio,
+            log_state_likelihood,
+            accepted,
+            log_rejection_prob,
+            link_false_pos,
+            link_false_neg,
+            link_prior,
+            num_selected_links,
+            num_unselected_links,
+            num_selected_active_interactions,
+            num_selected_inactive_interactions,
+            num_unselected_active_interactions,
+            num_unselected_inactive_interactions
+        ):
+        super(DetailedStateRecord, self).__init__(
+                transition_type,
+                log_transition_ratio,
+                log_state_likelihood,
+                accepted,
+                log_rejection_prob
+        )
+        self.link_false_pos = link_false_pos
+        self.link_false_neg = link_false_neg
+        self.link_prior = link_prior
+        self.num_selected_links = num_selected_links
+        self.num_unselected_links = num_unselected_links
+        self.num_selected_active_interactions = (
+                num_selected_active_interactions)
+        self.num_selected_inactive_interactions = (
+                num_selected_inactive_interactions)
+        self.num_unselected_active_interactions = (
+                num_unselected_active_interactions)
+        self.num_unselected_inactive_interactions = (
+                num_unselected_inactive_interactions)
+
+
+    def to_dict(self):
+        d = super(DetailedStateRecord, self).to_dict()
+        additional = {
+                'link_false_pos': self.link_false_pos,
+                'link_false_neg': self.link_false_neg,
+                'link_prior': self.link_prior,
+                'num_selected_links': self.num_selected_links,
+                'num_unselected_links': self.num_unselected_links,
+                'num_selected_active_interactions': (
+                        self.num_selected_active_interactions),
+                'num_selected_inactive_interactions': (
+                        self.num_selected_inactive_interactions),
+                'num_unselected_active_interactions': (
+                        self.num_unselected_active_interactions),
+                'num_unselected_inactive_interactions': (
+                        self.num_unselected_inactive_interactions),
+        }
+        d.update(additional)
+        return d
+
+
+class TermsStateRecord(DetailedStateRecord):
+    __slots__ = (
+            'num_selected_terms',
+            'num_unselected_terms'
+    )
+
+    def __init__(
+            self,
+            transition_type,
+            log_transition_ratio,
+            log_state_likelihood,
+            accepted,
+            log_rejection_prob,
+            link_false_pos,
+            link_false_neg,
+            link_prior,
+            num_selected_links,
+            num_unselected_links,
+            num_selected_active_interactions,
+            num_selected_inactive_interactions,
+            num_unselected_active_interactions,
+            num_unselected_inactive_interactions,
+            num_selected_terms,
+            num_unselected_terms
+        ):
+        super(TermsStateRecord, self).__init__(
+                transition_type,
+                log_transition_ratio,
+                log_state_likelihood,
+                accepted,
+                log_rejection_prob,
+                link_false_pos,
+                link_false_neg,
+                link_prior,
+                num_selected_links,
+                num_unselected_links,
+                num_selected_active_interactions,
+                num_selected_inactive_interactions,
+                num_unselected_active_interactions,
+                num_unselected_inactive_interactions
+        )
+        self.num_selected_terms = num_selected_terms
+        self.num_unselected_terms = num_unselected_terms
+
+
+    def to_dict(self):
+        d = super(TermsStateRecord, self).to_dict()
+        additional = {
+                'num_selected_terms': self.num_selected_terms,
+                'num_unselected_terms': self.num_unselected_terms,
+        }
+        d.update(additional)
+        return d
+
+
+class IndependentTermsStateRecord(TermsStateRecord):
+    __slots__ = ('term_prior',)
+
+    def __init__(
+            self,
+            transition_type,
+            log_transition_ratio,
+            log_state_likelihood,
+            accepted,
+            log_rejection_prob,
+            link_false_pos,
+            link_false_neg,
+            link_prior,
+            num_selected_links,
+            num_unselected_links,
+            num_selected_active_interactions,
+            num_selected_inactive_interactions,
+            num_unselected_active_interactions,
+            num_unselected_inactive_interactions,
+            num_selected_terms,
+            num_unselected_terms,
+            term_prior
+        ):
+        super(IndependentTermsStateRecord, self).__init__(
+                transition_type,
+                log_transition_ratio,
+                log_state_likelihood,
+                accepted,
+                log_rejection_prob,
+                link_false_pos,
+                link_false_neg,
+                link_prior,
+                num_selected_links,
+                num_unselected_links,
+                num_selected_active_interactions,
+                num_selected_inactive_interactions,
+                num_unselected_active_interactions,
+                num_unselected_inactive_interactions,
+                num_selected_terms,
+                num_unselected_terms,
+        )
+        self.term_prior = term_prior
+
+
+    def to_dict(self):
+        d = super(IndependentTermsStateRecord, self).to_dict()
+        d['term_prior'] = self.term_prior
+        return d
+
+
+class GenesBasedStateRecord(IndependentTermsStateRecord):
+    __slots__ = (
+            'term_false_pos',
+            'term_false_neg',
+            'num_selected_active_genes',
+            'num_selected_inactive_genes',
+            'num_unselected_active_genes',
+            'num_unselected_inactive_genes'
+    )
+
+    def __init__(
+            self,
+            transition_type,
+            log_transition_ratio,
+            log_state_likelihood,
+            accepted,
+            log_rejection_prob,
+            link_false_pos,
+            link_false_neg,
+            link_prior,
+            num_selected_links,
+            num_unselected_links,
+            num_selected_active_interactions,
+            num_selected_inactive_interactions,
+            num_unselected_active_interactions,
+            num_unselected_inactive_interactions,
+            num_selected_terms,
+            num_unselected_terms,
+            term_prior,
+            term_false_pos,
+            term_false_neg,
+            num_selected_active_genes,
+            num_selected_inactive_genes,
+            num_unselected_active_genes,
+            num_unselected_inactive_genes
+        ):
+        super(GenesBasedStateRecord, self).__init__(
+                transition_type,
+                log_transition_ratio,
+                log_state_likelihood,
+                accepted,
+                log_rejection_prob,
+                link_false_pos,
+                link_false_neg,
+                link_prior,
+                num_selected_links,
+                num_unselected_links,
+                num_selected_active_interactions,
+                num_selected_inactive_interactions,
+                num_unselected_active_interactions,
+                num_unselected_inactive_interactions,
+                num_selected_terms,
+                num_unselected_terms,
+                term_prior,
+        )
+        self.term_false_pos = term_false_pos
+        self.term_false_neg = term_false_neg
+        self.num_selected_active_genes = num_selected_active_genes
+        self.num_selected_inactive_genes = num_selected_inactive_genes
+        self.num_unselected_active_genes = num_unselected_active_genes
+        self.num_unselected_inactive_genes = (
+                num_unselected_inactive_genes)
+
+
+    def to_dict(self):
+        d = super(GenesBasedStateRecord, self).to_dict()
+        additional = {
+                'term_false_pos': self.term_false_pos,
+                'term_false_neg': self.term_false_neg,
+                'num_selected_active_genes': (
+                        self.num_selected_active_genes),
+                'num_selected_inactive_genes': (
+                        self.num_selected_inactive_genes),
+                'num_unselected_active_genes': (
+                        self.num_unselected_active_genes),
+                'num_unselected_inactive_genes': (
+                        self.num_unselected_inactive_genes),
+        }
+        d.update(additional)
+        return d
+
+
 class StateRecorder(object):
     pass
 
@@ -26,17 +344,23 @@ class StateRecorder(object):
 class PLNStateRecorder(StateRecorder):
     """A class to record the states of a `PLNMarkovChain` instance."""
 
-    def __init__(self, links, parameter_distributions):
+    def __init__(
+            self,
+            annotated_interactions,
+            parameter_distributions,
+        ):
         """Create a new instance.
 
         :Parameters:
-        - `links`: all the links which can possibly be selected
+        - `annotated_interactions`: an `AnnotatedInteractionsGraph`
+          instance
         - `parameter_distributions`: a dictionary with the names of the
           parameters and their possible distribution values
 
         """
         self.records_made = 0
-        self.selected_links_tallies = dict.fromkeys(links, 0)
+        self.selected_links_tallies = dict.fromkeys(
+                annotated_interactions.get_all_links(), 0)
         self.parameter_tallies = {}
         for param_name, distribution in parameter_distributions.items():
             distribution_dict = dict.fromkeys(distribution, 0)
@@ -67,19 +391,13 @@ class PLNStateRecorder(StateRecorder):
             self.parameter_tallies[param_name][param_value] += 1
 
 
-    def record_transition(self, transition_info):
+    def record_transition(self, markov_chain):
         """Records the information about the previous transition that
         led to this state.
 
-        :Parameters:
-        - `transition_info`: a tuple with the first item is a string
-          representing the transition type, the second item is a real
-          value representing the log of the transition ratio, and the
-          third item is either `True` or `False`, representing whether
-          or not that transition was accepted.
-
         """
-        self._transitions_data.append(transition_info)
+        record = OverallStateRecord(*markov_chain.last_transition_info)
+        self._transitions_data.append(record)
 
 
     def record_state(self, markov_chain):
@@ -92,7 +410,7 @@ class PLNStateRecorder(StateRecorder):
         self.record_links_state(markov_chain.current_state.links_state)
         self.record_parameters_state(
                 markov_chain.current_state.parameters_state)
-        self.record_transition(markov_chain.last_transition_info)
+        self.record_transition(markov_chain)
         self.records_made += 1
 
 
@@ -177,14 +495,8 @@ class PLNStateRecorder(StateRecorder):
         """
         output_records = []
 
-        for i, transition_info in enumerate(
-                self._transitions_data):
-            record = {
-                    'transition_type': transition_info[0],
-                    'log_transition_ratio': str(transition_info[1]),
-                    'log_state_likelihood': str(transition_info[2]),
-                    'accepted': str(transition_info[3]).lower()
-            }
+        for i, transition_info in enumerate(self._transitions_data):
+            record = transition_info.to_dict()
             output_records.append(record)
             # Periodically flush results to disk
             if not ((i + 1) % buffer_size):
@@ -202,21 +514,23 @@ class ArrayStateRecorder(PLNStateRecorder):
     state of `ArrayLinksState` instances.
 
     """
-    def __init__(self, links, parameter_distributions):
+    def __init__(
+            self,
+            annotated_interactions,
+            parameter_distributions,
+        ):
         """Create a new instance.
 
         :Parameters:
-        - `links`: an list of the links that can be selected. NOTE:
-          Links should appear in the same order in this list as they do
-          for the construction of the corresponding
-          `AnnotatedInteractionsArray` instance.
+        - `annotated_interactions`: an `AnnotatedInteractionsArray`
+          instance
         - `parameter_distributions`: a dictionary with the names of the
           parameters and their possible distribution values
 
         """
         self.records_made = 0
-        self.links = links
-        self.selected_links_tallies = numpy.zeros(len(links),
+        self.links = annotated_interactions.get_all_links()
+        self.selected_links_tallies = numpy.zeros(len(self.links),
                 numpy.int)
         self.parameter_tallies = {}
         for param_name, distribution in parameter_distributions.items():
@@ -275,101 +589,34 @@ class DetailedArrayStateRecorder(ArrayStateRecorder):
     about each step.
 
     """
-    def __init__(self, links, parameter_distributions):
-        """Create a new instance.
-
-        :Parameters:
-        - `links`: an list of the links that can be selected. NOTE:
-          Links should appear in the same order in this list as they do
-          for the construction of the corresponding
-          `AnnotatedInteractionsArray` instance.
-        - `parameter_distributions`: a dictionary with the names of the
-          parameters and their possible distribution values
-
-        """
-        super(DetailedArrayStateRecorder, self).__init__(links,
-                parameter_distributions)
-        # We're using this variable to store the information of the
-        # overall state.
-        self._overall_data = []
-
-
-    def record_state_statistics(self, overall_state):
+    def record_transition(self, markov_chain):
         """Record all the numbers of the current state.
 
         :Parameters:
         - `overall_state`: an `ArrayOverallState` instance
 
         """
-        state_info = {}
+        transition_info = markov_chain.last_transition_info
+        overall_state = markov_chain.current_state
         parameters_state = overall_state.parameters_state
-        state_info['link_false_pos'] = parameters_state.link_false_pos
-        state_info['link_false_neg'] = parameters_state.link_false_neg
-        state_info['link_prior'] = parameters_state.link_prior
         links_state = overall_state.links_state
-        state_info['num_selected_links'] = \
-                links_state.calc_num_selected_links()
-        state_info['num_unselected_links'] = \
-                links_state.calc_num_unselected_links()
-        state_info['num_selected_active_interactions'] = \
-                links_state.calc_num_selected_active_interactions()
-        state_info['num_selected_inactive_interactions'] = \
-                links_state.calc_num_selected_inactive_interactions()
-        state_info['num_unselected_active_interactions'] = \
-                links_state.calc_num_unselected_active_interactions()
-        state_info['num_unselected_inactive_interactions'] = \
-                links_state.calc_num_unselected_inactive_interactions()
-        self._overall_data.append(state_info)
-
-
-    def record_state(self, markov_chain):
-        """Record the features of the current state.
-
-        :Parameters:
-        - `markov_chain`: an `ArrayMarkovChain` instance
-
-        """
-        super(DetailedArrayStateRecorder, self).record_state(
-                markov_chain)
-        self.record_state_statistics(markov_chain.current_state)
-
-
-    def write_transition_states(
-            self,
-            out_csvfile,
-            buffer_size=100
-        ):
-        """Writes the transition state information for the Markov chain
-        to CSV files.
-
-        :Parameters:
-        - `out_csvfile`: a `csv.DictWriter` instance to output the
-          transition information for the burn-in period, with these
-          fields: `transition_type`, `log_transition_ratio`, `accepted`
-        - `buffer_size`: the number of records to write to disk at once
-
-        """
-        output_records = []
-
-        for i, transition_info in enumerate(
-                self._transitions_data):
-            record = {
-                    'transition_type': transition_info[0],
-                    'log_transition_ratio': str(transition_info[1]),
-                    'log_state_likelihood': str(transition_info[2]),
-                    'accepted': str(transition_info[3]).lower()
-            }
-            record.update(self._overall_data[i])
-            output_records.append(record)
-            # Periodically flush results to disk
-            if not ((i + 1) % buffer_size):
-                out_csvfile.writerows(output_records)
-                # Flush the scores
-                output_records = []
-
-        # Flush any remaining records
-        if output_records:
-            out_csvfile.writerows(output_records)
+        record = DetailedStateRecord(
+                transition_info[0],
+                transition_info[1],
+                transition_info[2],
+                transition_info[3],
+                transition_info[4],
+                parameters_state.link_false_pos,
+                parameters_state.link_false_neg,
+                parameters_state.link_prior,
+                links_state.calc_num_selected_links(),
+                links_state.calc_num_unselected_links(),
+                links_state.calc_num_selected_active_interactions(),
+                links_state.calc_num_selected_inactive_interactions(),
+                links_state.calc_num_unselected_active_interactions(),
+                links_state.calc_num_unselected_inactive_interactions(),
+        )
+        self._transitions_data.append(record)
 
 
 class TermsBasedStateRecorder(DetailedArrayStateRecorder):
@@ -377,7 +624,11 @@ class TermsBasedStateRecorder(DetailedArrayStateRecorder):
     state of `TermsBasedOverallState` instances.
 
     """
-    def __init__(self, annotated_interactions, parameter_distributions):
+    def __init__(
+            self,
+            annotated_interactions,
+            parameter_distributions,
+        ):
         self._annotated_interactions = annotated_interactions
         self.records_made = 0
         num_terms = self._annotated_interactions.calc_num_terms()
@@ -389,42 +640,38 @@ class TermsBasedStateRecorder(DetailedArrayStateRecorder):
             distribution_dict = dict.fromkeys(distribution, 0)
             self.parameter_tallies[param_name] = distribution_dict
         self._transitions_data = []
-        # We're using this variable to store the information of the
-        # overall state.
-        self._overall_data = []
 
 
-    def record_state_statistics(self, overall_state):
+    def record_transition(self, markov_chain):
         """Record all the numbers of the current state.
 
         :Parameters:
         - `overall_state`: an `ArrayOverallState` instance
 
         """
-        state_info = {}
+        transition_info = markov_chain.last_transition_info
+        overall_state = markov_chain.current_state
         parameters_state = overall_state.parameters_state
-        state_info['link_false_pos'] = parameters_state.link_false_pos
-        state_info['link_false_neg'] = parameters_state.link_false_neg
-        state_info['term_prior'] = parameters_state.term_prior
-        state_info['link_prior'] = parameters_state.link_prior
         links_state = overall_state.links_state
-        state_info['num_selected_terms'] = (
-                links_state.calc_num_selected_terms())
-        state_info['num_unselected_terms'] = (
-                links_state.calc_num_unselected_terms())
-        state_info['num_selected_links'] = (
-                links_state.calc_num_selected_links())
-        state_info['num_unselected_links'] = (
-                links_state.calc_num_unselected_links())
-        state_info['num_selected_active_interactions'] = (
-                links_state.calc_num_selected_active_interactions())
-        state_info['num_selected_inactive_interactions'] = (
-                links_state.calc_num_selected_inactive_interactions())
-        state_info['num_unselected_active_interactions'] = (
-                links_state.calc_num_unselected_active_interactions())
-        state_info['num_unselected_inactive_interactions'] = (
-                links_state.calc_num_unselected_inactive_interactions())
-        self._overall_data.append(state_info)
+        record = TermsStateRecord(
+                transition_info[0],
+                transition_info[1],
+                transition_info[2],
+                transition_info[3],
+                transition_info[4],
+                parameters_state.link_false_pos,
+                parameters_state.link_false_neg,
+                parameters_state.link_prior,
+                links_state.calc_num_selected_links(),
+                links_state.calc_num_unselected_links(),
+                links_state.calc_num_selected_active_interactions(),
+                links_state.calc_num_selected_inactive_interactions(),
+                links_state.calc_num_unselected_active_interactions(),
+                links_state.calc_num_unselected_inactive_interactions(),
+                links_state.calc_num_selected_terms(),
+                links_state.calc_num_unselected_terms(),
+        )
+        self._transitions_data.append(record)
 
 
     def record_links_state(self, links_state):
@@ -437,56 +684,6 @@ class TermsBasedStateRecorder(DetailedArrayStateRecorder):
         super(TermsBasedStateRecorder, self).record_links_state(
                 links_state)
         self.selected_terms_tallies += links_state.term_selections
-
-
-    def record_state(self, markov_chain):
-        """Record the features of the current state.
-
-        :Parameters:
-        - `markov_chain`: an `ArrayMarkovChain` instance
-
-        """
-        super(TermsBasedStateRecorder, self).record_state(
-                markov_chain)
-        self.record_state_statistics(markov_chain.current_state)
-
-
-    def write_transition_states(
-            self,
-            out_csvfile,
-            buffer_size=100
-        ):
-        """Writes the transition state information for the Markov chain
-        to CSV files.
-
-        :Parameters:
-        - `out_csvfile`: a `csv.DictWriter` instance to output the
-          transition information for the burn-in period, with these
-          fields: `transition_type`, `log_transition_ratio`, `accepted`
-        - `buffer_size`: the number of records to write to disk at once
-
-        """
-        output_records = []
-
-        for i, transition_info in enumerate(
-                self._transitions_data):
-            record = {
-                    'transition_type': transition_info[0],
-                    'log_transition_ratio': str(transition_info[1]),
-                    'log_state_likelihood': str(transition_info[2]),
-                    'accepted': str(transition_info[3]).lower()
-            }
-            record.update(self._overall_data[i])
-            output_records.append(record)
-            # Periodically flush results to disk
-            if not ((i + 1) % buffer_size):
-                out_csvfile.writerows(output_records)
-                # Flush the scores
-                output_records = []
-
-        # Flush any remaining records
-        if output_records:
-            out_csvfile.writerows(output_records)
 
 
     def write_terms_probabilities(self, out_csvfile, buffer_size=100):
@@ -571,4 +768,88 @@ class TermsBasedStateRecorder(DetailedArrayStateRecorder):
         # Flush any remaining records
         if output_records:
             out_csvfile.writerows(output_records)
+
+
+class IndependentTermsBasedStateRecorder(TermsBasedStateRecorder):
+    """Similar to `PLNStateRecorder`, however, adapted to record the
+    state of `IndependentTermsBasedOverallState` instances.
+
+    """
+    def record_transition(self, markov_chain):
+        """Record all the numbers of the current state.
+
+        :Parameters:
+        - `overall_state`: an `ArrayOverallState` instance
+
+        """
+        transition_info = markov_chain.last_transition_info
+        overall_state = markov_chain.current_state
+        parameters_state = overall_state.parameters_state
+        links_state = overall_state.links_state
+        record = IndependentTermsStateRecord(
+                transition_info[0],
+                transition_info[1],
+                transition_info[2],
+                transition_info[3],
+                transition_info[4],
+                parameters_state.link_false_pos,
+                parameters_state.link_false_neg,
+                parameters_state.link_prior,
+                links_state.calc_num_selected_links(),
+                links_state.calc_num_unselected_links(),
+                links_state.calc_num_selected_active_interactions(),
+                links_state.calc_num_selected_inactive_interactions(),
+                links_state.calc_num_unselected_active_interactions(),
+                links_state.calc_num_unselected_inactive_interactions(),
+                links_state.calc_num_selected_terms(),
+                links_state.calc_num_unselected_terms(),
+                parameters_state.term_prior,
+        )
+        self._transitions_data.append(record)
+
+
+
+
+class GenesBasedStateRecorder(TermsBasedStateRecorder):
+    """Similar to `PLNStateRecorder`, however, adapted to record the
+    state of `GenesBasedOverallState` instances.
+
+    """
+    def record_transition(self, markov_chain):
+        """Record all the numbers of the current state.
+
+        :Parameters:
+        - `overall_state`: an `ArrayOverallState` instance
+
+        """
+        transition_info = markov_chain.last_transition_info
+        overall_state = markov_chain.current_state
+        parameters_state = overall_state.parameters_state
+        links_state = overall_state.links_state
+        record = GenesBasedStateRecord(
+                transition_info[0],
+                transition_info[1],
+                transition_info[2],
+                transition_info[3],
+                transition_info[4],
+                parameters_state.link_false_pos,
+                parameters_state.link_false_neg,
+                parameters_state.link_prior,
+                links_state.calc_num_selected_links(),
+                links_state.calc_num_unselected_links(),
+                links_state.calc_num_selected_active_interactions(),
+                links_state.calc_num_selected_inactive_interactions(),
+                links_state.calc_num_unselected_active_interactions(),
+                links_state.calc_num_unselected_inactive_interactions(),
+                links_state.calc_num_selected_terms(),
+                links_state.calc_num_unselected_terms(),
+                parameters_state.term_prior,
+                parameters_state.term_false_pos,
+                parameters_state.term_false_neg,
+                links_state.calc_num_selected_active_genes(),
+                links_state.calc_num_selected_inactive_genes(),
+                links_state.calc_num_unselected_active_genes(),
+                links_state.calc_num_unselected_inactive_genes(),
+        )
+        self._transitions_data.append(record)
 
