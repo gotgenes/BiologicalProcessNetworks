@@ -361,7 +361,7 @@ class McmcArgParser(ExpressionBasedArgParser):
                     "[implies ``--disable-swaps``]")
         )
         self.cli_parser.add_option('--intraterms', action='store_true',
-                help=("consider also intraterm interactions [NOTE: ",
+                help=("consider also intraterm interactions [NOTE: "
                     "only available in conjunction with "
                     "'--terms-based']")
         )
