@@ -629,7 +629,6 @@ class AnnotatedInteractionsGraph(object):
         # and interactions present, since this is apparently not cached
         # by the NetworkX Graph class.
         self._num_genes = None
-        self._num_interactions = None
         self._create_interaction_annotations(links_of_interest)
         self._num_terms = None
         self._num_annotation_pairs = None
@@ -645,8 +644,8 @@ class AnnotatedInteractionsGraph(object):
         # new entry during a key lookup if that key doesn't exist; we'll
         # convert our structures back to regular Python dictionaries
         # before letting the user access them.
-        self._annotations_to_interactions = dict(
-                self._annotations_to_interactions)
+        self._coannotations_to_interactions = dict(
+                self._coannotations_to_interactions)
         self._intraterm_interactions = dict(
                 self._intraterm_interactions)
 
@@ -663,13 +662,20 @@ class AnnotatedInteractionsGraph(object):
         """
         # We use this dictionary for fast lookup of what interactions
         # are co-annotated by any given pair of annotation terms.
-        self._annotations_to_interactions = collections.defaultdict(set)
+        self._coannotations_to_interactions = collections.defaultdict(list)
         # We use a separate dictionary for interactions co-annotated by
         # the same term.
-        self._intraterm_interactions = collections.defaultdict(set)
-        total_num_interactions = self.calc_num_interactions()
+        self._intraterm_interactions = collections.defaultdict(list)
+        # We want to move away from actual interactions to indices of
+        # interactions, so we'll use the following lists to help us with
+        # this.
+        self._interactions = self._interactions_graph.edges()
+        self._coannotated_indices = []
+        self._intraterm_indices = []
+        self._coannotated_and_intraterm_indices = []
+        total_num_interactions = len(self._interactions)
         broadcast_percent_complete = 0
-        for i, edge in enumerate(self._interactions_graph.edges_iter()):
+        for i, edge in enumerate(self._interactions):
             gene1_annotations = self._annotations_dict.get_item_keys(
                     edge[0])
             self._annotation_terms.update(gene1_annotations)
@@ -678,28 +684,40 @@ class AnnotatedInteractionsGraph(object):
             self._annotation_terms.update(gene2_annotations)
             pairwise_combinations = itertools.product(gene1_annotations,
                     gene2_annotations)
-            for gene1_annotation, gene2_annotation in \
-                    pairwise_combinations:
+            coannotated = False
+            intraterm = False
+            for gene1_annotation, gene2_annotation in (
+                    pairwise_combinations):
                 # If these are the same term, add them to the intraterm
                 # interactions.
                 if gene1_annotation == gene2_annotation:
-                    self._intraterm_interactions[gene1_annotation].add(
-                            edge)
-                    continue
-                # We want to preserve alphabetical order of the
-                # annotations.
-                if gene1_annotation > gene2_annotation:
-                    gene1_annotation, gene2_annotation = \
-                            gene2_annotation, gene1_annotation
-                link = (gene1_annotation, gene2_annotation)
-                if links_of_interest is not None:
-                    if link not in links_of_interest:
-                        continue
-                if SUPERDEBUG_MODE:
-                    logger.log(SUPERDEBUG, "Adding interactions "
-                            "for link %s" % (link,))
-                self._annotations_to_interactions[(gene1_annotation,
-                    gene2_annotation)].add(edge)
+                    self._intraterm_interactions[gene1_annotation].append(
+                            i)
+                    intraterm = True
+                else:
+                    # We want to preserve alphabetical order of the
+                    # annotations.
+                    if gene1_annotation > gene2_annotation:
+                        gene1_annotation, gene2_annotation = (
+                                gene2_annotation, gene1_annotation)
+                    link = (gene1_annotation, gene2_annotation)
+                    if links_of_interest is not None:
+                        if link not in links_of_interest:
+                            continue
+                    if SUPERDEBUG_MODE:
+                        logger.log(SUPERDEBUG, "Adding interaction "
+                                "for link %s" % (link,))
+                    self._coannotations_to_interactions[(gene1_annotation,
+                        gene2_annotation)].append(i)
+                    coannotated = True
+
+            if coannotated:
+                self._coannotated_indices.append(i)
+                if intraterm:
+                    self._intraterm_indices.append(i)
+                    self._coannotated_and_intraterm_indices.append(i)
+            elif intraterm:
+                self._intraterm_indices.append(i)
 
             percent_complete = int(100 * float(i + 1) /
                     total_num_interactions)
@@ -717,7 +735,7 @@ class AnnotatedInteractionsGraph(object):
         interactions.
 
         """
-        return self._annotations_to_interactions.keys()
+        return self._coannotations_to_interactions.keys()
 
 
     def calc_num_terms(self):
@@ -734,7 +752,7 @@ class AnnotatedInteractionsGraph(object):
         """
         if self._num_annotation_pairs is None:
             self._num_annotation_pairs = len(
-                    self._annotations_to_interactions)
+                    self._coannotations_to_interactions)
         return self._num_annotation_pairs
 
 
@@ -749,10 +767,24 @@ class AnnotatedInteractionsGraph(object):
         initialization.
 
         """
-        if self._num_interactions is None:
-            self._num_interactions = (
-                    self._interactions_graph.number_of_edges())
-        return self._num_interactions
+        return len(self._interactions)
+
+
+    def calc_num_coannotated_interactions(self):
+        """Returns the number of co-annotated interactions."""
+        return len(self._coannotated_indices)
+
+
+    def calc_num_intraterm_interactions(self):
+        """Returns the number of intraterm interactions."""
+        return len(self._intraterm_indices)
+
+
+    def calc_num_coannotated_and_intraterm_interactions(self):
+        """Returns the number of co-annotated or intraterm interactions.
+
+        """
+        return len(self._coannotated_and_intraterm_indices)
 
 
     def calc_num_genes(self):
@@ -777,10 +809,18 @@ class AnnotatedInteractionsGraph(object):
         return self._annotations_dict[term]
 
 
+    def get_interaction(self, interaction_index):
+        """Returns the genes involved in an interaction at the given
+        index.
+
+        """
+        return self._interactions[interaction_index]
+
+
     def get_coannotated_interactions(self, term1, term2):
-        """Returns a `set` of all interactions for which one gene is
-        annotated with `term1`, and the other gene is annotated with
-        `term2`.
+        """Returns a list of indices of interactions for which one
+        gene is annotated with `term1`, and the other gene is annotated
+        with `term2`.
 
         :Parameters:
         - `term1`: an annotation term
@@ -791,7 +831,7 @@ class AnnotatedInteractionsGraph(object):
             term1, term2 = term2, term1
         elif term1 == term2:
             raise ValueError("Terms may not be the same.")
-        interactions = self._annotations_to_interactions[(term1,
+        interactions = self._coannotations_to_interactions[(term1,
                 term2)]
         return interactions
 
@@ -804,7 +844,7 @@ class AnnotatedInteractionsGraph(object):
         - `term`: an annotation term
 
         """
-        return self._intraterm_interactions[term]
+        return self._intraterm_indices[term]
 
 
     def get_active_genes(self, cutoff, greater=True):
@@ -833,10 +873,39 @@ class AnnotatedInteractionsGraph(object):
         return active_genes
 
 
+    def _get_active_interactions(self, indices, cutoff, greater=True):
+        """Helper function for determining active interactions. Returns
+        a list of all "active" interactions among those whose indices
+        are provided.
+
+        :Parameters:
+        - `indices`: indices of interactions to screen
+        - `cutoff`: a numerical threshold value for determining whether
+          a gene is active or not
+        - `greater`: if `True`, consider a gene "active" if its
+          differential expression value is greater than or equal to the
+          `cutoff`; if `False`, consider a gene "active" if its value is
+          less than or equal to the `cutoff`.
+
+        """
+        active_interactions = []
+        for index in indices:
+            edge = self._interactions[index]
+            gene1_expr = self._interactions_graph.node[edge[0]]['weight']
+            gene2_expr = self._interactions_graph.node[edge[1]]['weight']
+            if greater:
+                if gene1_expr >= cutoff and gene2_expr >= cutoff:
+                    active_interactions.append(index)
+            if not greater:
+                if gene1_expr <= cutoff and gene2_expr <= cutoff:
+                    active_interactions.append(index)
+        return active_interactions
+
+
     def get_active_interactions(self, cutoff, greater=True):
-        """Returns a `set` of all "active" interactions: those for which
-        both incident genes pass a cutoff for differential gene
-        expression.
+        """Returns a list of indices of all "active" interactions: those
+        for which both incident genes pass a cutoff for differential
+        gene expression.
 
         :Parameters:
         - `cutoff`: a numerical threshold value for determining whether
@@ -847,17 +916,75 @@ class AnnotatedInteractionsGraph(object):
           less than or equal to the `cutoff`.
 
         """
-        active_interactions = set()
-        for edge in self._interactions_graph.edges_iter():
-            gene1_expr = self._interactions_graph.node[edge[0]]['weight']
-            gene2_expr = self._interactions_graph.node[edge[1]]['weight']
-            if greater:
-                if gene1_expr >= cutoff and gene2_expr >= cutoff:
-                    active_interactions.add(edge)
-            if not greater:
-                if gene1_expr <= cutoff and gene2_expr <= cutoff:
-                    active_interactions.add(edge)
-        return active_interactions
+        return self._get_active_interactions(
+                range(len(self._interactions)),
+                cutoff,
+                greater
+        )
+
+
+    def get_active_coannotated_interactions(self, cutoff, greater=True):
+        """Returns a a list of indices "active" co-annotated
+        interactions: those for which both incident genes pass a cutoff
+        for differential gene expression.
+
+        :Parameters:
+        - `cutoff`: a numerical threshold value for determining whether
+          a gene is active or not
+        - `greater`: if `True`, consider a gene "active" if its
+          differential expression value is greater than or equal to the
+          `cutoff`; if `False`, consider a gene "active" if its value is
+          less than or equal to the `cutoff`.
+
+        """
+        return self._get_active_interactions(
+                self._coannotated_indices,
+                cutoff,
+                greater
+        )
+
+
+    def get_active_intraterm_interactions(self, cutoff, greater=True):
+        """Returns a a list of indices "active" intraterm
+        interactions: those for which both incident genes pass a cutoff
+        for differential gene expression.
+
+        :Parameters:
+        - `cutoff`: a numerical threshold value for determining whether
+          a gene is active or not
+        - `greater`: if `True`, consider a gene "active" if its
+          differential expression value is greater than or equal to the
+          `cutoff`; if `False`, consider a gene "active" if its value is
+          less than or equal to the `cutoff`.
+
+        """
+        return self._get_active_interactions(
+                self._intraterm_indices,
+                cutoff,
+                greater
+        )
+
+
+    def get_active_coannotated_and_intraterm_interactions(self,
+            cutoff, greater=True):
+        """Returns a a list of indices "active" co-annotated or
+        intraterm interactions: those for which both incident genes pass
+        a cutoff for differential gene expression.
+
+        :Parameters:
+        - `cutoff`: a numerical threshold value for determining whether
+          a gene is active or not
+        - `greater`: if `True`, consider a gene "active" if its
+          differential expression value is greater than or equal to the
+          `cutoff`; if `False`, consider a gene "active" if its value is
+          less than or equal to the `cutoff`.
+
+        """
+        return self._get_active_interactions(
+                self._coannotated_and_intraterm_indices,
+                cutoff,
+                greater
+        )
 
 
 class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
@@ -878,14 +1005,14 @@ class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
         # returned by dict.keys() and dict.values() correspond. See
         # http://docs.python.org/library/stdtypes.html#dict.items
         self._links, self._link_interactions = (
-                self._annotations_to_interactions.keys(),
-                self._annotations_to_interactions.values()
+                self._coannotations_to_interactions.keys(),
+                self._coannotations_to_interactions.values()
         )
         self._links_indices = dict((l, i) for (i, l) in
                 enumerate(self._links))
         # Delete the dictionary mapping since we will not use it
         # hereafter.
-        del self._annotations_to_interactions
+        del self._coannotations_to_interactions
 
         self._intraterm_interactions = dict(
                 self._intraterm_interactions)
@@ -940,10 +1067,10 @@ class AnnotatedInteractionsArray(AnnotatedInteractionsGraph):
 
 
     def get_coannotated_interactions(self, link_index):
-        """Returns a `set` of all interactions for which one gene is
-        annotated with the first term, and the other gene is annotated
-        with the second term, for the pair of terms represented by the
-        index.
+        """Returns a list of indices of interactions for which one gene
+        is annotated with the first term, and the other gene is
+        annotated with the second term, for the pair of terms
+        represented by the link index.
 
         :Parameters:
         - `link_index`: the index of the link whose interactions are
@@ -969,8 +1096,8 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
         self._map_terms_to_indices()
         # Get linearized lists of the links and their interactions.
         named_links, self._link_interactions = (
-                self._annotations_to_interactions.keys(),
-                self._annotations_to_interactions.values()
+                self._coannotations_to_interactions.keys(),
+                self._coannotations_to_interactions.values()
         )
 
         num_terms = len(self._annotation_terms)
@@ -1006,7 +1133,7 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
 
         # Delete the dictionary mapping since we will not use it
         # hereafter.
-        del self._annotations_to_interactions
+        del self._coannotations_to_interactions
 
         # We follow a similar pattern for the intraterm interactions.
         self._intraterm_indices = numpy.zeros(num_terms, int)
@@ -1174,10 +1301,10 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
 
 
     def get_coannotated_interactions(self, link_index):
-        """Returns a `set` of all interactions for which one gene is
-        annotated with the first term, and the other gene is annotated
-        with the second term, for the pair of terms represented by the
-        index.
+        """Returns a list of indices of interactions for which one gene
+        is annotated with the first term, and the other gene is
+        annotated with the second term, for the pair of terms
+        represented by the link index.
 
         Returns ``None`` if the terms co-annotate no interactions.
 

@@ -773,23 +773,30 @@ class PLNLinksState(State):
           "selected" initially in the process linkage network
         - `annotated_interactions`: an `AnnotatedInteractionsGraph`
           instance
-        - `active_interactions`: a set of interactions that are
-          considered "active"
+        - `active_interactions`: a list of indices of interactions that
+          are considered "active"
 
         """
         self.process_links = process_links
         self._annotated_interactions = annotated_interactions
-        self._active_interactions = active_interactions
+        self._active_interactions = numpy.zeros(
+                self._annotated_interactions.calc_num_interactions(),
+                bool
+        )
+        self._active_interactions[numpy.array(active_interactions)] = True
+        self._num_active_interactions = len(active_interactions)
 
+        self._num_interactions = self._annotated_interactions.calc_num_coannotated_interactions()
         # _interaction_selection_counts maintains the number of times a
         # gene-gene interaction has been "covered" by the selected
         # process links
-        #
-        # TODO: Copying this default dict is slow; refactor this code to
-        # instead use a numpy array, by converting each interaction from
-        # a tuple of gene names to an index (integer) in the array.
-        self._interaction_selection_counts = collections.defaultdict(
-                int)
+        self._interaction_selection_counts = numpy.zeros(
+                self._annotated_interactions.calc_num_interactions(),
+                int
+        )
+        # _num_selected_interactions keeps track of how many
+        # interactions have been selected
+        self._num_selected_interactions = 0
         # _num_selected_active_interactions keeps a cache of how many
         # active interactions are currently selected
         self._num_selected_active_interactions = 0
@@ -851,11 +858,13 @@ class PLNLinksState(State):
         for interaction in interactions:
             self._interaction_selection_counts[interaction] += 1
             # If this is the first time selecting this interaction,
-            # and this interaction is noted as active, increment the
-            # active count
-            if (self._interaction_selection_counts[interaction] == 1) \
-                    and (interaction in self._active_interactions):
-                self._num_selected_active_interactions += 1
+            # increment the selection count.
+            if self._interaction_selection_counts[interaction] == 1:
+                self._num_selected_interactions += 1
+                # And if this interaction is noted as active, increment
+                # the active selected count
+                if self._active_interactions[interaction]:
+                    self._num_selected_active_interactions += 1
 
 
     def select_link(self, annotation1, annotation2):
@@ -891,12 +900,12 @@ class PLNLinksState(State):
         for interaction in interactions:
             self._interaction_selection_counts[interaction] -= 1
             # If we have removed the only link which selected this
-            # interaction, remove the interaction from the dictionary
+            # interaction, decrement the selection count
             if not self._interaction_selection_counts[interaction]:
-                del self._interaction_selection_counts[interaction]
+                self._num_selected_interactions -= 1
                 # Further, if it was an active interaction, deduct from
                 # the count of selected active interactions
-                if interaction in self._active_interactions:
+                if self._active_interactions[interaction]:
                     self._num_selected_active_interactions -= 1
 
 
@@ -1072,7 +1081,7 @@ class PLNLinksState(State):
         # The keys to _interaction_selection_counts are those
         # interactions which have been covered by at least one selected
         # process link
-        return len(self._interaction_selection_counts)
+        return self._num_selected_interactions
 
 
     def calc_num_unselected_interactions(self):
@@ -1080,8 +1089,8 @@ class PLNLinksState(State):
         link.
 
         """
-        return self._annotated_interactions.calc_num_interactions() -\
-                self.calc_num_selected_interactions()
+        return (self._num_interactions -
+                self._num_selected_interactions)
 
 
     def calc_num_selected_active_interactions(self):
@@ -1097,8 +1106,8 @@ class PLNLinksState(State):
         selected link.
 
         """
-        return len(self._active_interactions) -\
-                self._num_selected_active_interactions
+        return (self._num_active_interactions -
+                self._num_selected_active_interactions)
 
 
     def calc_num_selected_inactive_interactions(self):
@@ -1106,8 +1115,8 @@ class PLNLinksState(State):
         least one selected link.
 
         """
-        return self.calc_num_selected_interactions() -\
-                self.calc_num_selected_active_interactions()
+        return (self.calc_num_selected_interactions() -
+                self.calc_num_selected_active_interactions())
 
 
     def calc_num_unselected_inactive_interactions(self):
@@ -1115,8 +1124,8 @@ class PLNLinksState(State):
         selected link.
 
         """
-        return self.calc_num_unselected_interactions() -\
-                self.calc_num_unselected_active_interactions()
+        return (self.calc_num_unselected_interactions() -
+                self.calc_num_unselected_active_interactions())
 
 
 class ArrayLinksState(PLNLinksState):
@@ -1135,8 +1144,8 @@ class ArrayLinksState(PLNLinksState):
         :Parameters:
         - `annotated_interactions`: an `AnnotatedInteractionsArray`
           instance
-        - `active_interactions`: a set of interactions that are
-          considered "active"
+        - `active_interactions`: a list of indices of interactions that
+          are considered "active"
         - `seed_links_indices`: indices for the subset of links
           being considered as "selected" initially in the process
           linkage network
@@ -1145,11 +1154,29 @@ class ArrayLinksState(PLNLinksState):
         self._annotated_interactions = annotated_interactions
         self._num_links = annotated_interactions.calc_num_links()
         self._num_selected_links = 0
-        self._active_interactions = active_interactions
-        self._interaction_selection_counts = collections.defaultdict(
-                int)
+
+        self._num_interactions = self._annotated_interactions.calc_num_coannotated_interactions()
+        self._active_interactions = numpy.zeros(
+                self._annotated_interactions.calc_num_interactions(),
+                bool
+        )
+        self._active_interactions[numpy.array(active_interactions)] = True
+        self._num_active_interactions = len(active_interactions)
+
+        # _interaction_selection_counts maintains the number of times a
+        # gene-gene interaction has been "covered" by the selected
+        # process links
+        self._interaction_selection_counts = numpy.zeros(
+                self._annotated_interactions.calc_num_interactions(),
+                int
+        )
+        # _num_selected_interactions keeps track of how many
+        # interactions have been selected
+        self._num_selected_interactions = 0
+        # _num_selected_active_interactions keeps a cache of how many
+        # active interactions are currently selected
         self._num_selected_active_interactions = 0
-        self._delta = None
+
         # _link_selections is a 1-dimensional `numpy.ndarray` of boolean
         # data type, where the value at each index is `True` if the link
         # represented by that index has been selected, or `False` if the
@@ -1406,8 +1433,8 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         :Parameters:
         - `annotated_interactions`: an `AnnotatedInteractions2dArray`
           instance
-        - `active_interactions`: a set of interactions that are
-          considered "active"
+        - `active_interactions`: a list of indices of interactions that
+          are considered "active"
         - `seed_links_indices`: indices for the subset of links
           being considered as "selected" initially in the process
           linkage network
@@ -1418,9 +1445,27 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         self._num_selected_terms = 0
         self._num_links = annotated_interactions.calc_num_links()
         self._num_selected_links = 0
-        self._active_interactions = active_interactions
-        self._interaction_selection_counts = collections.defaultdict(
-                int)
+
+        self._num_interactions = self._annotated_interactions.calc_num_coannotated_interactions()
+        self._active_interactions = numpy.zeros(
+                self._annotated_interactions.calc_num_interactions(),
+                bool
+        )
+        self._active_interactions[numpy.array(active_interactions)] = True
+        self._num_active_interactions = len(active_interactions)
+
+        # _interaction_selection_counts maintains the number of times a
+        # gene-gene interaction has been "covered" by the selected
+        # process links
+        self._interaction_selection_counts = numpy.zeros(
+                self._annotated_interactions.calc_num_interactions(),
+                int
+        )
+        # _num_selected_interactions keeps track of how many
+        # interactions have been selected
+        self._num_selected_interactions = 0
+        # _num_selected_active_interactions keeps a cache of how many
+        # active interactions are currently selected
         self._num_selected_active_interactions = 0
 
         # link_selections is a 2-dimensional symmetric array of boolean
@@ -1690,8 +1735,8 @@ class IntraTermsAndLinksState(TermsAndLinksState):
         - `seed_links_indices`: indices for the subset of links
           being considered as "selected" initially in the process
           linkage network
-        - `active_interactions`: a set of interactions that are
-          considered "active"
+        - `active_interactions`: a list of indices of interactions that
+          are considered "active"
 
         """
         super(IntraTermsAndLinksState, self).__init__(
@@ -1699,6 +1744,7 @@ class IntraTermsAndLinksState(TermsAndLinksState):
                 active_interactions,
                 seed_links_indices=seed_links_indices
         )
+        self._num_interactions = self._annotated_interactions.calc_num_coannotated_and_intraterm_interactions()
 
 
     def select_term(self, term):
@@ -1736,13 +1782,13 @@ class IndependentTermsAndLinksState(TermsAndLinksState):
             seed_terms_indices=None,
             seed_links_indices=None
         ):
-        """Create a new IntraTermsAndLinksState instance
+        """Create a new IndependentTermsAndLinksState instance
 
         :Parameters:
         - `annotated_interactions`: an `AnnotatedInteractions2dArray`
           instance
-        - `active_interactions`: a set of interactions that are
-          considered "active"
+        - `active_interactions`: a list of indices of interactions that
+          are considered "active"
         - `seed_terms_indices`: indices for the subset of terms being
           considered as "selected" initially
         - `seed_links_indices`: indices for the subset of links
@@ -1939,8 +1985,8 @@ class GenesBasedTermsAndLinksState(IndependentTermsAndLinksState):
         :Parameters:
         - `annotated_interactions`: an `AnnotatedInteractions2dArray`
           instance
-        - `active_interactions`: a set of interactions that are
-          considered "active"
+        - `active_interactions`: a list of indices of interactions that
+          are considered "active"
         - `active_genes`: a list of genes considered "active"
         - `seed_terms_indices`: indices for the subset of terms being
           considered as "selected" initially
@@ -2117,9 +2163,9 @@ class PLNOverallState(State):
         process_links = frozenset(process_links)
         # Next, figure out which interactions are active
         logger.info("Determining active interactions.")
-        active_interactions = \
-                annotated_interactions.get_active_interactions(
-                        active_gene_threshold
+        active_interactions = (
+                annotated_interactions.get_active_coannotated_interactions(
+                        active_gene_threshold)
         )
         self.links_state = PLNLinksState(
                 process_links,
@@ -2285,9 +2331,9 @@ class ArrayOverallState(PLNOverallState):
         num_process_links = annotated_interactions.calc_num_links()
         # Next, figure out which interactions are active
         logger.info("Determining active interactions.")
-        active_interactions = \
-                annotated_interactions.get_active_interactions(
-                        active_gene_threshold
+        active_interactions = (
+                annotated_interactions.get_active_coannotated_interactions(
+                        active_gene_threshold)
         )
         self.links_state = links_state_class(
                 annotated_interactions,
@@ -2358,10 +2404,16 @@ class TermsBasedOverallState(ArrayOverallState):
 
         # Next, figure out which interactions are active
         logger.info("Determining active interactions.")
-        active_interactions = \
-                annotated_interactions.get_active_interactions(
-                        active_gene_threshold
-        )
+        if issubclass(links_state_class, IntraTermsAndLinksState):
+            active_interactions = (
+                    annotated_interactions.get_active_coannotated_and_intraterm_interactions(
+                            active_gene_threshold)
+            )
+        else:
+            active_interactions = (
+                    annotated_interactions.get_active_coannotated_interactions(
+                            active_gene_threshold)
+            )
         self.links_state = links_state_class(
                 annotated_interactions,
                 active_interactions,
@@ -2554,7 +2606,7 @@ class GenesBasedOverallState(TermsBasedOverallState):
                 active_gene_threshold)
         logger.info("Determining active interactions.")
         active_interactions = (
-                annotated_interactions.get_active_interactions(
+                annotated_interactions.get_active_coannotated_interactions(
                         active_gene_threshold
                 )
         )
