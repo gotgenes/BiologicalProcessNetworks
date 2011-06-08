@@ -662,10 +662,10 @@ class AnnotatedInteractionsGraph(object):
         """
         # We use this dictionary for fast lookup of what interactions
         # are co-annotated by any given pair of annotation terms.
-        self._coannotations_to_interactions = collections.defaultdict(list)
+        self._coannotations_to_interactions = collections.defaultdict(set)
         # We use a separate dictionary for interactions co-annotated by
         # the same term.
-        self._intraterm_interactions = collections.defaultdict(list)
+        self._intraterm_interactions = collections.defaultdict(set)
         # We want to move away from actual interactions to indices of
         # interactions, so we'll use the following lists to help us with
         # this.
@@ -691,7 +691,7 @@ class AnnotatedInteractionsGraph(object):
                 # If these are the same term, add them to the intraterm
                 # interactions.
                 if gene1_annotation == gene2_annotation:
-                    self._intraterm_interactions[gene1_annotation].append(
+                    self._intraterm_interactions[gene1_annotation].add(
                             i)
                     intraterm = True
                 else:
@@ -708,7 +708,7 @@ class AnnotatedInteractionsGraph(object):
                         logger.log(SUPERDEBUG, "Adding interaction "
                                 "for link %s" % (link,))
                     self._coannotations_to_interactions[(gene1_annotation,
-                        gene2_annotation)].append(i)
+                        gene2_annotation)].add(i)
                     coannotated = True
 
             if coannotated:
