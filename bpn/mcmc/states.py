@@ -456,8 +456,17 @@ class FixedDistributionParametersState(RandomTransitionParametersState):
     distribution for the link prior.
 
     """
-    # Gives a range [0.025, 0.5], inclusive.
-    _link_prior_distribution = [0.025 * k for k in range(1, 21)]
+    _link_prior_distribution = [
+            0.00001,
+            0.00005,
+            0.0001,
+            0.0005,
+            0.001,
+            0.005,
+            0.01,
+            ] + [
+            # This latter portion gives a range [0.05, 0.5], inclusive.
+            0.05 * k for k in range(1, 11)]
     def __init__(
             self,
             number_of_links,
