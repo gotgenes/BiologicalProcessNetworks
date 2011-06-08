@@ -14,6 +14,7 @@ Monte Carlo technique.
 
 
 import collections
+import datetime
 import itertools
 import sys
 
@@ -74,6 +75,7 @@ def check_link_components(annotated_interactions):
 
 
 def main(argv=None):
+    starting_time = datetime.datetime.now()
     cli_parser = bpn.cli.McmcCli()
     input_data = cli_parser.parse_args(argv)
 
@@ -272,7 +274,14 @@ Chain information:
                 input_data.terms_outfile, TERMS_FIELDNAMES)
         markov_chain.state_recorder.write_terms_probabilities(
                 terms_out_csvwriter)
+    ending_time = datetime.datetime.now()
     logger.info("Finished.")
+    running_time = ending_time - starting_time
+    hours, remainder = divmod(running_time.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    hours += running_time.days * 24
+    logger.info("Running time: {0}h {1}m {2}s".format(hours, minutes,
+        seconds))
 
 
 if __name__ == '__main__':
