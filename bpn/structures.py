@@ -694,7 +694,12 @@ class AnnotatedInteractionsGraph(object):
                     self._intraterm_interactions[gene1_annotation].add(
                             i)
                     intraterm = True
-                else:
+                # Avoid adding co-annotation by this pair when both
+                # genes are annotated by both terms. In other words,
+                # the interaction is co-annotated only if at least one
+                # of the terms annotates only one of the two genes.
+                elif not ((gene1_annotation in gene2_annotations) and
+                        (gene2_annotation in gene1_annotations)):
                     # We want to preserve alphabetical order of the
                     # annotations.
                     if gene1_annotation > gene2_annotation:
