@@ -718,11 +718,10 @@ class AnnotatedInteractionsGraph(object):
 
             if coannotated:
                 self._coannotated_indices.append(i)
-                if intraterm:
-                    self._intraterm_indices.append(i)
-                    self._coannotated_and_intraterm_indices.append(i)
-            elif intraterm:
+            if intraterm:
                 self._intraterm_indices.append(i)
+            if coannotated or intraterm:
+                self._coannotated_and_intraterm_indices.append(i)
 
             percent_complete = int(100 * float(i + 1) /
                     total_num_interactions)
@@ -786,7 +785,8 @@ class AnnotatedInteractionsGraph(object):
 
 
     def calc_num_coannotated_and_intraterm_interactions(self):
-        """Returns the number of co-annotated or intraterm interactions.
+        """Returns the number of interactions either co-annotated or
+        intraterm.
 
         """
         return len(self._coannotated_and_intraterm_indices)

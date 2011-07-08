@@ -2401,6 +2401,12 @@ class TermsBasedOverallState(ArrayOverallState):
 
         # Next, figure out which interactions are active
         logger.info("Determining active interactions.")
+        # This is super-ugly, but we need to choose the appropriate
+        # selection of interactions based off of whether or not we
+        # should include intraterm interactions. The easiest way to tell
+        # this is to just check if the links state model is supposed to
+        # include intraterm interactions by checking if it's subclassed
+        # off the intraterms model.
         if issubclass(links_state_class, IntraTermsAndLinksState):
             active_interactions = (
                     annotated_interactions.get_active_coannotated_and_intraterm_interactions(
@@ -2515,10 +2521,17 @@ class IndependentTermsBasedOverallState(TermsBasedOverallState):
         num_terms = annotated_interactions.calc_num_terms()
 
         logger.info("Determining active interactions.")
-        active_interactions = (
-                annotated_interactions.get_active_interactions(
-                        active_gene_threshold)
-        )
+        # See above comments to explain this hack below.
+        if issubclass(links_state_class, IntraTermsAndLinksState):
+            active_interactions = (
+                    annotated_interactions.get_active_coannotated_and_intraterm_interactions(
+                            active_gene_threshold)
+            )
+        else:
+            active_interactions = (
+                    annotated_interactions.get_active_coannotated_interactions(
+                            active_gene_threshold)
+            )
         self.links_state = links_state_class(
                 annotated_interactions,
                 active_interactions,
