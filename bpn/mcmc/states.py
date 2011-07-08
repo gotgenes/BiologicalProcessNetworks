@@ -2258,10 +2258,7 @@ class PLNOverallState(State):
         log_prob_obs_given_sel = (
                 self.calc_log_prob_observed_given_selected())
         log_prob_sel = self.calc_log_prob_selected()
-        num_neighbor_states = (
-                self.calc_num_neighboring_states())
-        log_likelihood = (log_prob_obs_given_sel + log_prob_sel -
-                math.log10(num_neighbor_states))
+        log_likelihood = log_prob_obs_given_sel + log_prob_sel
         return log_likelihood
 
 

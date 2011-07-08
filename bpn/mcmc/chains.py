@@ -107,6 +107,36 @@ class PLNMarkovChain(MarkovChain):
         self.last_transition_info = None
 
 
+    def calc_log_transition_ratio(self, proposed_state):
+        """Calculates the likelihoods of the current state, the proposed
+        state, and the transition ratio between them.
+
+        Returns the current state's log-likelihood, the proposed state's
+        log-likelihood, and the transition ratio between the current and
+        proposed states.
+
+        :Parameters:
+        - `proposed_state`: the proposed state of transition
+
+        """
+        current_log_likelihood = (
+                self.current_state.calc_log_likelihood())
+        current_num_neighbors = (
+                self.current_state.calc_num_neighboring_states())
+        proposed_log_likelihood = (
+                proposed_state.calc_log_likelihood())
+        proposed_num_neighbors = (
+                proposed_state.calc_num_neighboring_states())
+        log_transition_ratio = (
+                (proposed_log_likelihood -
+                    math.log10(current_num_neighbors)) -
+                (current_log_likelihood -
+                    math.log10(proposed_num_neighbors))
+        )
+        return (current_log_likelihood, proposed_log_likelihood,
+                log_transition_ratio)
+
+
     def next_state(self):
         """Move to the next state in the Markov chain.
 
@@ -127,12 +157,9 @@ class PLNMarkovChain(MarkovChain):
         """
         proposed_state = self.current_state.create_new_state()
         proposed_transition_type = proposed_state._delta[0]
-        current_log_likelihood = (
-                self.current_state.calc_log_likelihood())
-        proposed_log_likelihood = (
-                proposed_state.calc_log_likelihood())
-        log_transition_ratio = (proposed_log_likelihood -
-                current_log_likelihood)
+        (current_log_likelihood, proposed_log_likelihood,
+                log_transition_ratio) = self.calc_log_transition_ratio(
+                        proposed_state)
         logger.debug("Log of transition ratio: %s" % (
                 log_transition_ratio))
         # Remember, a very favorable state has a likelihood close to 1
