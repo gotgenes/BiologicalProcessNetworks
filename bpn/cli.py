@@ -297,7 +297,7 @@ class McmcArgParser(ExpressionBasedArgParser):
                     "%default=-log10(0.05)]")
         )
         self.cli_parser.add_option('--transition-ratio', type='float',
-                default=0.9,
+                default=mcmc.defaults.TRANSITION_TYPE_RATIO,
                 help=("The target ratio of proposed link transitions "
                     "to proposed parameter transitions [default: "
                     "%default]"

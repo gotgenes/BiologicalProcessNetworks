@@ -100,6 +100,14 @@ def main(argv=None):
     check_link_components(annotated_interactions)
 
     logger.info("Constructing the Markov chain.")
+    # Prepare the CSV writers for the state recorder.
+    links_out_csvwriter = convutils.make_csv_dict_writer(
+            input_data.links_outfile, LINKS_FIELDNAMES)
+    parameters_out_csvwriter = convutils.make_csv_dict_writer(
+            input_data.parameters_outfile, PARAMETERS_FIELDNAMES)
+    if input_data.terms_based:
+        terms_out_csvwriter = convutils.make_csv_dict_writer(
+                input_data.terms_outfile, TERMS_FIELDNAMES)
 
     # Present the seed_links as indices.
     if input_data.seed_links:
@@ -108,6 +116,7 @@ def main(argv=None):
     else:
         seed_links = None
 
+    # Choose the appropriate parameters class.
     if input_data.fixed_distributions:
         logger.info("Using fixed distributions for all parameters.")
         if input_data.terms_based:
@@ -138,17 +147,25 @@ def main(argv=None):
             #seed_terms = None
 
         if input_data.genes_based:
-            transitions_csvfile = convutils.make_csv_dict_writer(
+            transitions_out_csvwriter = convutils.make_csv_dict_writer(
                     input_data.transitions_outfile,
                     GENES_BASED_TRANSITIONS_FIELDNAMES
             )
+            state_recorder = recorders.GenesBasedStateRecorder(
+                    annotated_interactions,
+                    parameters_out_csvwriter,
+                    links_out_csvwriter,
+                    terms_out_csvwriter,
+                    transitions_out_csvwriter
+            )
             logger.info("Assessing term overlap through genes.")
             markov_chain = chains.GenesBasedMarkovChain(
+                    state_recorder,
+                    input_data.burn_in,
+                    input_data.steps,
                     annotated_interactions,
                     input_data.activity_threshold,
-                    input_data.transition_ratio,
-                    num_steps=input_data.steps,
-                    burn_in=input_data.burn_in,
+                    transition_type_ratio=input_data.transition_ratio,
                     seed_terms_indices=seed_terms,
                     seed_links_indices=seed_links,
                     link_false_pos=input_data.link_false_pos,
@@ -160,30 +177,44 @@ def main(argv=None):
             )
         else:
             if input_data.independent_terms:
-                transitions_csvfile = convutils.make_csv_dict_writer(
+                transitions_out_csvwriter = convutils.make_csv_dict_writer(
                         input_data.transitions_outfile,
                         INDEPENDENT_TERMS_BASED_TRANSITIONS_FIELDNAMES
                 )
+                state_recorder = recorders.IndependentTermsBasedStateRecorder(
+                        annotated_interactions,
+                        parameters_out_csvwriter,
+                        links_out_csvwriter,
+                        terms_out_csvwriter,
+                        transitions_out_csvwriter
+                )
                 logger.info("Using independent-terms model.")
                 markov_chain = chains.IndependentTermsBasedMarkovChain(
+                        state_recorder,
+                        input_data.burn_in,
+                        input_data.steps,
                         annotated_interactions,
                         input_data.activity_threshold,
-                        input_data.transition_ratio,
-                        num_steps=input_data.steps,
-                        burn_in=input_data.burn_in,
+                        transition_type_ratio=input_data.transition_ratio,
                         seed_terms_indices=seed_terms,
                         seed_links_indices=seed_links,
                         link_false_pos=input_data.link_false_pos,
                         link_false_neg=input_data.link_false_neg,
                         link_prior=input_data.link_prior,
                         term_prior=input_data.term_prior,
-                        state_recorder_class=recorders.IndependentTermsBasedStateRecorder,
                         parameters_state_class=parameters_state_class
                 )
             else:
-                transitions_csvfile = convutils.make_csv_dict_writer(
+                transitions_out_csvwriter = convutils.make_csv_dict_writer(
                         input_data.transitions_outfile,
                         TERMS_BASED_TRANSITIONS_FIELDNAMES
+                )
+                state_recorder = recorders.TermsBasedStateRecorder(
+                        annotated_interactions,
+                        parameters_out_csvwriter,
+                        links_out_csvwriter,
+                        terms_out_csvwriter,
+                        transitions_out_csvwriter
                 )
                 if input_data.intraterms:
                     logger.info("Considering intra-term interactions.")
@@ -192,11 +223,12 @@ def main(argv=None):
                     links_state_class = states.TermsAndLinksState
 
                 markov_chain = chains.TermsBasedMarkovChain(
+                        state_recorder,
+                        input_data.burn_in,
+                        input_data.steps,
                         annotated_interactions,
                         input_data.activity_threshold,
-                        input_data.transition_ratio,
-                        num_steps=input_data.steps,
-                        burn_in=input_data.burn_in,
+                        transition_type_ratio=input_data.transition_ratio,
                         seed_links_indices=seed_links,
                         link_false_pos=input_data.link_false_pos,
                         link_false_neg=input_data.link_false_neg,
@@ -213,28 +245,38 @@ def main(argv=None):
             links_state_class = states.ArrayLinksState
         if input_data.detailed_transitions:
             logger.info("Recording extra information for each state.")
-            state_recorder_class = recorders.DetailedArrayStateRecorder
-            transitions_csvfile = convutils.make_csv_dict_writer(
+            transitions_out_csvwriter = convutils.make_csv_dict_writer(
                     input_data.transitions_outfile,
                     DETAILED_TRANSITIONS_FIELDNAMES
             )
+            state_recorder = recorders.DetailedArrayStateRecorder(
+                    annotated_interactions,
+                    parameters_out_csvwriter,
+                    links_out_csvwriter,
+                    transitions_out_csvwriter
+            )
         else:
-            state_recorder_class = recorders.ArrayStateRecorder
-            transitions_csvfile = convutils.make_csv_dict_writer(
+            transitions_out_csvwriter = convutils.make_csv_dict_writer(
                     input_data.transitions_outfile,
                     TRANSITIONS_FIELDNAMES
             )
+            state_recorder = recorders.ArrayStateRecorder(
+                    annotated_interactions,
+                    parameters_out_csvwriter,
+                    links_out_csvwriter,
+                    transitions_out_csvwriter
+            )
         markov_chain = chains.ArrayMarkovChain(
+                state_recorder,
+                input_data.burn_in,
+                input_data.steps,
                 annotated_interactions,
                 input_data.activity_threshold,
-                input_data.transition_ratio,
-                num_steps=input_data.steps,
-                burn_in=input_data.burn_in,
+                transition_type_ratio=input_data.transition_ratio,
                 seed_links_indices=seed_links,
                 link_false_pos=input_data.link_false_pos,
                 link_false_neg=input_data.link_false_neg,
                 link_prior=input_data.link_prior,
-                state_recorder_class=state_recorder_class,
                 parameters_state_class=parameters_state_class,
                 links_state_class=links_state_class,
         )
@@ -253,27 +295,17 @@ Chain information:
 
     logger.info("Writing link results to {0}".format(
             input_data.links_outfile.name))
-    links_out_csvwriter = convutils.make_csv_dict_writer(
-            input_data.links_outfile, LINKS_FIELDNAMES)
-    markov_chain.state_recorder.write_links_probabilities(
-            links_out_csvwriter)
+    markov_chain.state_recorder.write_links_probabilities()
     logger.info("Writing parameter results to {0}".format(
             input_data.parameters_outfile.name))
-    parameters_out_csvwriter = convutils.make_csv_dict_writer(
-            input_data.parameters_outfile, PARAMETERS_FIELDNAMES)
-    markov_chain.state_recorder.write_parameters_probabilities(
-            parameters_out_csvwriter)
-    logger.info("Writing transitions data to {0}.".format(
-            input_data.transitions_outfile.name))
-    markov_chain.state_recorder.write_transition_states(
-            transitions_csvfile)
+    markov_chain.state_recorder.write_parameters_probabilities()
     if input_data.terms_based:
         logger.info("Writing terms data to {0}.".format(
             input_data.terms_outfile.name))
-        terms_out_csvwriter = convutils.make_csv_dict_writer(
-                input_data.terms_outfile, TERMS_FIELDNAMES)
-        markov_chain.state_recorder.write_terms_probabilities(
-                terms_out_csvwriter)
+        markov_chain.state_recorder.write_terms_probabilities()
+    markov_chain.state_recorder.write_transition_states()
+    logger.info("Transitions data written to {0}.".format(
+            input_data.transitions_outfile.name))
     ending_time = datetime.datetime.now()
     logger.info("Finished.")
     running_time = ending_time - starting_time

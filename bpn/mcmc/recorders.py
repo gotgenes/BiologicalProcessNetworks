@@ -17,7 +17,8 @@ import logging
 logger = logging.getLogger('bpn.mcmcbpn.recorders')
 
 from bpn import structures
-from defaults import SUPERDEBUG, SUPERDEBUG_MODE
+from defaults import (SUPERDEBUG, SUPERDEBUG_MODE, OUTPUT_BUFFER_SIZE,
+        TRANSITIONS_BUFFER_SIZE)
 
 
 # This is a bit of a hack to reduce memory usage of the records. Rather
@@ -347,25 +348,42 @@ class PLNStateRecorder(StateRecorder):
     def __init__(
             self,
             annotated_interactions,
-            parameter_distributions,
+            parameters_csvwriter,
+            links_csvwriter,
+            transitions_csvwriter,
+            transitions_buffer_size=TRANSITIONS_BUFFER_SIZE
         ):
         """Create a new instance.
 
         :Parameters:
         - `annotated_interactions`: an `AnnotatedInteractionsGraph`
           instance
-        - `parameter_distributions`: a dictionary with the names of the
-          parameters and their possible distribution values
+        - `parameters_csvwriter`: a `csv.DictWriter` instance for
+          outputting parameter results with these fields:
+          ``'parameter'``, ``'value'``, ``'probability'``
+        - `links_csvwriter`: a `csv.DictWriter` instance for
+          outputting links results ``'term1'``, ``'term2'``,
+          ``'probability'``
+        - `transitions_csvwriter`: a `csv.DictWriter` instance for
+          outputting transitions data
+        - `transitions_buffer_size`: number of records to maintain
+          before outputting transitions information [default: ``10000``]
 
         """
         self.records_made = 0
         self.selected_links_tallies = dict.fromkeys(
                 annotated_interactions.get_all_links(), 0)
-        self.parameter_tallies = {}
-        for param_name, distribution in parameter_distributions.items():
-            distribution_dict = dict.fromkeys(distribution, 0)
-            self.parameter_tallies[param_name] = distribution_dict
+        # We'll use nested defaultdicts to track the values for each
+        # parameter that we see. In this way, we will not have to know
+        # ahead of time what parameters are contained in the parameter
+        # state and what values they may take.
+        self.parameter_tallies = collections.defaultdict(
+                lambda : collections.defaultdict(int))
         self._transitions_data = []
+        self.parameters_csvwriter = parameters_csvwriter
+        self.links_csvwriter = links_csvwriter
+        self.transitions_csvwriter = transitions_csvwriter
+        self._transitions_buffer_size = transitions_buffer_size
 
 
     def record_links_state(self, links_state):
@@ -386,7 +404,7 @@ class PLNStateRecorder(StateRecorder):
         - `parameters_state`: a `PLNParametersState` instance
 
         """
-        for param_name in self.parameter_tallies.keys():
+        for param_name in parameters_state.parameter_names:
             param_value = getattr(parameters_state, param_name)
             self.parameter_tallies[param_name][param_value] += 1
 
@@ -412,14 +430,18 @@ class PLNStateRecorder(StateRecorder):
                 markov_chain.current_state.parameters_state)
         self.record_transition(markov_chain)
         self.records_made += 1
+        # Output the transitions data if we've progressed through enough
+        # steps.
+        if not (self.records_made % self._transitions_buffer_size):
+            logger.info("Writing and flushing transitions data.")
+            self.write_transition_states()
+            self._flush_transitions_data()
 
 
-    def write_links_probabilities(self, out_csvfile, buffer_size=100):
+    def write_links_probabilities(self, buffer_size=OUTPUT_BUFFER_SIZE):
         """Output the final probabilities for the links.
 
         :Parameters:
-        - `out_csvfile`: a `csv.DictWriter` instance with these fields:
-          `term1`, `term2`, `probability`
         - `buffer_size`: the number of records to write to disk at once
 
         """
@@ -440,23 +462,17 @@ class PLNStateRecorder(StateRecorder):
             )
             # Periodically flush results to disk
             if not ((i + 1) % buffer_size):
-                out_csvfile.writerows(output_records)
+                self.links_csvwriter.writerows(output_records)
                 # Flush the scores
                 output_records = []
 
         # Flush any remaining records
         if output_records:
-            out_csvfile.writerows(output_records)
+            self.links_csvwriter.writerows(output_records)
 
 
-    def write_parameters_probabilities(self, out_csvfile):
-        """Output the final probabilities for the parameters.
-
-        :Parameters:
-        - `out_csvfile`: a `csv.DictWriter` instance with these fields:
-          `parameter`, `value`, `probability`
-
-        """
+    def write_parameters_probabilities(self):
+        """Output the final probabilities for the parameters."""
         num_total_steps = float(self.records_made)
         output_records = []
         param_names = self.parameter_tallies.keys()
@@ -466,8 +482,8 @@ class PLNStateRecorder(StateRecorder):
             param_values = distribution.keys()
             param_values.sort()
             for param_value in param_values:
-                value_probability = distribution[param_value] / \
-                        num_total_steps
+                value_probability = (distribution[param_value] /
+                        num_total_steps)
                 output_records.append(
                         {
                             'parameter': param_name,
@@ -475,21 +491,24 @@ class PLNStateRecorder(StateRecorder):
                             'probability': value_probability
                         }
                 )
-        out_csvfile.writerows(output_records)
+        self.parameters_csvwriter.writerows(output_records)
 
 
-    def write_transition_states(
-            self,
-            out_csvfile,
-            buffer_size=100
-        ):
+    def _flush_transitions_data(self):
+        """Flushes the transitions data that is stored.
+
+        NOTE: Should only be done after outputting transition data
+        (e.g., writing to file)
+
+        """
+        self._transitions_data = []
+
+
+    def write_transition_states(self, buffer_size=OUTPUT_BUFFER_SIZE):
         """Writes the transition state information for the Markov chain
         to CSV files.
 
         :Parameters:
-        - `out_csvfile`: a `csv.DictWriter` instance to output the
-          transition information for the burn-in period, with these
-          fields: `transition_type`, `log_transition_ratio`, `accepted`
         - `buffer_size`: the number of records to write to disk at once
 
         """
@@ -500,13 +519,13 @@ class PLNStateRecorder(StateRecorder):
             output_records.append(record)
             # Periodically flush results to disk
             if not ((i + 1) % buffer_size):
-                out_csvfile.writerows(output_records)
+                self.transitions_csvwriter.writerows(output_records)
                 # Flush the scores
                 output_records = []
 
         # Flush any remaining records
         if output_records:
-            out_csvfile.writerows(output_records)
+            self.transitions_csvwriter.writerows(output_records)
 
 
 class ArrayStateRecorder(PLNStateRecorder):
@@ -517,26 +536,43 @@ class ArrayStateRecorder(PLNStateRecorder):
     def __init__(
             self,
             annotated_interactions,
-            parameter_distributions,
+            parameters_csvwriter,
+            links_csvwriter,
+            transitions_csvwriter,
+            transitions_buffer_size=TRANSITIONS_BUFFER_SIZE
         ):
         """Create a new instance.
 
         :Parameters:
-        - `annotated_interactions`: an `AnnotatedInteractionsArray`
+        - `annotated_interactions`: an `AnnotatedInteractionsGraph`
           instance
-        - `parameter_distributions`: a dictionary with the names of the
-          parameters and their possible distribution values
+        - `parameters_csvwriter`: a `csv.DictWriter` instance for
+          outputting parameter results with these fields:
+          ``'parameter'``, ``'value'``, ``'probability'``
+        - `links_csvwriter`: a `csv.DictWriter` instance for
+          outputting links results ``'term1'``, ``'term2'``,
+          ``'probability'``
+        - `transitions_csvwriter`: a `csv.DictWriter` instance for
+          outputting transitions data
+        - `transitions_buffer_size`: number of records to maintain
+          before outputting transitions information [default: ``10000``]
 
         """
         self.records_made = 0
         self.links = annotated_interactions.get_all_links()
         self.selected_links_tallies = numpy.zeros(len(self.links),
                 numpy.int)
-        self.parameter_tallies = {}
-        for param_name, distribution in parameter_distributions.items():
-            distribution_dict = dict.fromkeys(distribution, 0)
-            self.parameter_tallies[param_name] = distribution_dict
+        # We'll use nested defaultdicts to track the values for each
+        # parameter that we see. In this way, we will not have to know
+        # ahead of time what parameters are contained in the parameter
+        # state and what values they may take.
+        self.parameter_tallies = collections.defaultdict(
+                lambda : collections.defaultdict(int))
         self._transitions_data = []
+        self.parameters_csvwriter = parameters_csvwriter
+        self.links_csvwriter = links_csvwriter
+        self.transitions_csvwriter = transitions_csvwriter
+        self._transitions_buffer_size = transitions_buffer_size
 
 
     def record_links_state(self, links_state):
@@ -549,18 +585,16 @@ class ArrayStateRecorder(PLNStateRecorder):
         self.selected_links_tallies += links_state.link_selections
 
 
-    def write_links_probabilities(self, out_csvfile, buffer_size=100):
+    def write_links_probabilities(self, buffer_size=OUTPUT_BUFFER_SIZE):
         """Output the final probabilities for the links.
 
         :Parameters:
-        - `out_csvfile`: a `csv.DictWriter` instance with these fields:
-          `term1`, `term2`, `probability`
         - `buffer_size`: the number of records to write to disk at once
 
         """
         num_total_steps = float(self.records_made)
-        link_probabilities = self.selected_links_tallies / \
-                num_total_steps
+        link_probabilities = (self.selected_links_tallies /
+                num_total_steps)
         output_records = []
 
         for i, link in enumerate(self.links):
@@ -575,13 +609,13 @@ class ArrayStateRecorder(PLNStateRecorder):
             )
             # Periodically flush results to disk
             if not ((i + 1) % buffer_size):
-                out_csvfile.writerows(output_records)
+                self.links_csvwriter.writerows(output_records)
                 # Flush the scores
                 output_records = []
 
         # Flush any remaining records
         if output_records:
-            out_csvfile.writerows(output_records)
+            self.links_csvwriter.writerows(output_records)
 
 
 class DetailedArrayStateRecorder(ArrayStateRecorder):
@@ -593,7 +627,7 @@ class DetailedArrayStateRecorder(ArrayStateRecorder):
         """Record all the numbers of the current state.
 
         :Parameters:
-        - `overall_state`: an `ArrayOverallState` instance
+        - `markov_chain`: a `PLNMarkovChain` instance
 
         """
         transition_info = markov_chain.last_transition_info
@@ -627,26 +661,57 @@ class TermsBasedStateRecorder(DetailedArrayStateRecorder):
     def __init__(
             self,
             annotated_interactions,
-            parameter_distributions,
+            parameters_csvwriter,
+            links_csvwriter,
+            terms_csvwriter,
+            transitions_csvwriter,
+            transitions_buffer_size=TRANSITIONS_BUFFER_SIZE
         ):
+        """Create a new instance.
+
+        :Parameters:
+        - `annotated_interactions`: an `AnnotatedInteractionsGraph`
+          instance
+        - `parameters_csvwriter`: a `csv.DictWriter` instance for
+          outputting parameter results with these fields:
+          ``'parameter'``, ``'value'``, ``'probability'``
+        - `links_csvwriter`: a `csv.DictWriter` instance for
+          outputting links results ``'term1'``, ``'term2'``,
+          ``'probability'``
+        - `terms_csvwriter`: a `csv.DictWriter` instance for
+          outputting terms results with these fields: ``'term'``,
+          ``'probability'``
+        - `transitions_csvwriter`: a `csv.DictWriter` instance for
+          outputting transitions data
+        - `transitions_buffer_size`: number of records to maintain
+          before outputting transitions information [default: ``10000``]
+
+        """
         self._annotated_interactions = annotated_interactions
         self.records_made = 0
         num_terms = self._annotated_interactions.calc_num_terms()
         self.selected_terms_tallies = numpy.zeros(num_terms, int)
         self.selected_links_tallies = structures.symzeros(num_terms,
                 int)
-        self.parameter_tallies = {}
-        for param_name, distribution in parameter_distributions.items():
-            distribution_dict = dict.fromkeys(distribution, 0)
-            self.parameter_tallies[param_name] = distribution_dict
+        # We'll use nested defaultdicts to track the values for each
+        # parameter that we see. In this way, we will not have to know
+        # ahead of time what parameters are contained in the parameter
+        # state and what values they may take.
+        self.parameter_tallies = collections.defaultdict(
+                lambda : collections.defaultdict(int))
         self._transitions_data = []
+        self.parameters_csvwriter = parameters_csvwriter
+        self.links_csvwriter = links_csvwriter
+        self.terms_csvwriter = terms_csvwriter
+        self.transitions_csvwriter = transitions_csvwriter
+        self._transitions_buffer_size = transitions_buffer_size
 
 
     def record_transition(self, markov_chain):
         """Record all the numbers of the current state.
 
         :Parameters:
-        - `overall_state`: an `ArrayOverallState` instance
+        - `markov_chain`: a `PLNMarkovChain` instance
 
         """
         transition_info = markov_chain.last_transition_info
@@ -686,12 +751,10 @@ class TermsBasedStateRecorder(DetailedArrayStateRecorder):
         self.selected_terms_tallies += links_state.term_selections
 
 
-    def write_terms_probabilities(self, out_csvfile, buffer_size=100):
+    def write_terms_probabilities(self, buffer_size=OUTPUT_BUFFER_SIZE):
         """Output the final probabilities for the links.
 
         :Parameters:
-        - `out_csvfile`: a `csv.DictWriter` instance with these fields:
-          ``'term'``, ``'probability'``
         - `buffer_size`: the number of records to write to disk at once
 
         """
@@ -718,21 +781,19 @@ class TermsBasedStateRecorder(DetailedArrayStateRecorder):
             )
             # Periodically flush results to disk
             if not ((i + 1) % buffer_size):
-                out_csvfile.writerows(output_records)
+                self.terms_csvwriter.writerows(output_records)
                 # Flush the scores
                 output_records = []
 
         # Flush any remaining records
         if output_records:
-            out_csvfile.writerows(output_records)
+            self.terms_csvwriter.writerows(output_records)
 
 
-    def write_links_probabilities(self, out_csvfile, buffer_size=100):
+    def write_links_probabilities(self, buffer_size=OUTPUT_BUFFER_SIZE):
         """Output the final probabilities for the links.
 
         :Parameters:
-        - `out_csvfile`: a `csv.DictWriter` instance with these fields:
-          `term1`, `term2`, `probability`
         - `buffer_size`: the number of records to write to disk at once
 
         """
@@ -761,13 +822,13 @@ class TermsBasedStateRecorder(DetailedArrayStateRecorder):
             )
             # Periodically flush results to disk
             if not ((i + 1) % buffer_size):
-                out_csvfile.writerows(output_records)
+                self.links_csvwriter.writerows(output_records)
                 # Flush the scores
                 output_records = []
 
         # Flush any remaining records
         if output_records:
-            out_csvfile.writerows(output_records)
+            self.links_csvwriter.writerows(output_records)
 
 
 class IndependentTermsBasedStateRecorder(TermsBasedStateRecorder):
@@ -806,8 +867,6 @@ class IndependentTermsBasedStateRecorder(TermsBasedStateRecorder):
                 parameters_state.term_prior,
         )
         self._transitions_data.append(record)
-
-
 
 
 class GenesBasedStateRecorder(TermsBasedStateRecorder):

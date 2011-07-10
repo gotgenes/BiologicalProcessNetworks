@@ -26,12 +26,17 @@ BROADCAST_PERCENT = 1
 
 BURN_IN = 20000
 NUM_STEPS = 1000000
+TRANSITION_TYPE_RATIO = 0.9
+
 TEMPERATURE = 100000
 END_TEMPERATURE = 0.1
 
 # If you alter this value, make sure you update the help string in
 # cli.py!
 ACTIVITY_THRESHOLD = -math.log10(0.05)
+
+OUTPUT_BUFFER_SIZE = 1000
+TRANSITIONS_BUFFER_SIZE = 100000
 
 LINKS_FIELDNAMES = ('term1', 'term2', 'probability')
 PARAMETERS_OUTFILE = 'parameter_results.tsv'
