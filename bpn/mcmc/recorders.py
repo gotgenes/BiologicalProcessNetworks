@@ -653,7 +653,7 @@ class DetailedArrayStateRecorder(ArrayStateRecorder):
         self._transitions_data.append(record)
 
 
-class TermsBasedStateRecorder(DetailedArrayStateRecorder):
+class TermsBasedStateRecorder(ArrayStateRecorder):
     """Similar to `PLNStateRecorder`, however, adapted to record the
     state of `TermsBasedOverallState` instances.
 
@@ -705,38 +705,6 @@ class TermsBasedStateRecorder(DetailedArrayStateRecorder):
         self.terms_csvwriter = terms_csvwriter
         self.transitions_csvwriter = transitions_csvwriter
         self._transitions_buffer_size = transitions_buffer_size
-
-
-    def record_transition(self, markov_chain):
-        """Record all the numbers of the current state.
-
-        :Parameters:
-        - `markov_chain`: a `PLNMarkovChain` instance
-
-        """
-        transition_info = markov_chain.last_transition_info
-        overall_state = markov_chain.current_state
-        parameters_state = overall_state.parameters_state
-        links_state = overall_state.links_state
-        record = TermsStateRecord(
-                transition_info[0],
-                transition_info[1],
-                transition_info[2],
-                transition_info[3],
-                transition_info[4],
-                parameters_state.link_false_pos,
-                parameters_state.link_false_neg,
-                parameters_state.link_prior,
-                links_state.calc_num_selected_links(),
-                links_state.calc_num_unselected_links(),
-                links_state.calc_num_selected_active_interactions(),
-                links_state.calc_num_selected_inactive_interactions(),
-                links_state.calc_num_unselected_active_interactions(),
-                links_state.calc_num_unselected_inactive_interactions(),
-                links_state.calc_num_selected_terms(),
-                links_state.calc_num_unselected_terms(),
-        )
-        self._transitions_data.append(record)
 
 
     def record_links_state(self, links_state):
@@ -831,9 +799,47 @@ class TermsBasedStateRecorder(DetailedArrayStateRecorder):
             self.links_csvwriter.writerows(output_records)
 
 
-class IndependentTermsBasedStateRecorder(TermsBasedStateRecorder):
-    """Similar to `PLNStateRecorder`, however, adapted to record the
-    state of `IndependentTermsBasedOverallState` instances.
+class DetailedTermsBasedStateRecorder(TermsBasedStateRecorder):
+    """Similar to `TermsBasedStateRecorder`, but records more
+    information about each state.
+
+    """
+    def record_transition(self, markov_chain):
+        """Record all the numbers of the current state.
+
+        :Parameters:
+        - `markov_chain`: a `PLNMarkovChain` instance
+
+        """
+        transition_info = markov_chain.last_transition_info
+        overall_state = markov_chain.current_state
+        parameters_state = overall_state.parameters_state
+        links_state = overall_state.links_state
+        record = TermsStateRecord(
+                transition_info[0],
+                transition_info[1],
+                transition_info[2],
+                transition_info[3],
+                transition_info[4],
+                parameters_state.link_false_pos,
+                parameters_state.link_false_neg,
+                parameters_state.link_prior,
+                links_state.calc_num_selected_links(),
+                links_state.calc_num_unselected_links(),
+                links_state.calc_num_selected_active_interactions(),
+                links_state.calc_num_selected_inactive_interactions(),
+                links_state.calc_num_unselected_active_interactions(),
+                links_state.calc_num_unselected_inactive_interactions(),
+                links_state.calc_num_selected_terms(),
+                links_state.calc_num_unselected_terms(),
+        )
+        self._transitions_data.append(record)
+
+
+class DetailedIndependentTermsBasedStateRecorder(
+        DetailedTermsBasedStateRecorder):
+    """Similar to `DetailedTermsBasedStateRecorder`, however, adapted to
+    record the state of `IndependentTermsBasedOverallState` instances.
 
     """
     def record_transition(self, markov_chain):
@@ -869,9 +875,10 @@ class IndependentTermsBasedStateRecorder(TermsBasedStateRecorder):
         self._transitions_data.append(record)
 
 
-class GenesBasedStateRecorder(TermsBasedStateRecorder):
-    """Similar to `PLNStateRecorder`, however, adapted to record the
-    state of `GenesBasedOverallState` instances.
+class DetailedGenesBasedStateRecorder(
+        DetailedIndependentTermsBasedStateRecorder):
+    """Similar to `DetailedIndependentTermsBasedStateRecorder`, however,
+    adapted to record the state of `GenesBasedOverallState` instances.
 
     """
     def record_transition(self, markov_chain):
