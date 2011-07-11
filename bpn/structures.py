@@ -376,8 +376,9 @@ class McmcInputData(BplnInputData):
             term_prior,
             seed_terms,
             seed_links,
-            free_parameters,
+            stringent_coannotations,
             fixed_distributions,
+            free_parameters,
             disable_swaps,
             terms_based,
             intraterms,
@@ -417,12 +418,14 @@ class McmcInputData(BplnInputData):
           seed when initializing the Markov chain
         - `seed_links`: an iterable of annotation pairs to use as a seed
           when initializing the Markov chain
-        - `free_parameters`: `True` if parameters are free take a random
-          value from their distribution, `False` if they may only take
-          adjoining values
+        - `stringent_coannotations`: `True` if stringent definition of
+          co-annotation should be used
         - `fixed_distributions`: `True` if fixed distributions for link
           (and term) priors should be used, `False` if dynamic
           distributions should be used
+        - `free_parameters`: `True` if parameters are free take a random
+          value from their distribution, `False` if they may only take
+          adjoining values
         - `disable_swaps`: `True` if swap transitions are to be
           disabled, `False` otherwise.
         - `terms_based`: `True` if terms-based model is to be used,
@@ -466,8 +469,9 @@ class McmcInputData(BplnInputData):
         self.term_prior = term_prior
         self.seed_terms = seed_terms
         self.seed_links = seed_links
-        self.free_parameters = free_parameters
+        self.stringent_coannotations = stringent_coannotations
         self.fixed_distributions = fixed_distributions
+        self.free_parameters = free_parameters
         self.disable_swaps = disable_swaps
         self.intraterms = intraterms
         self.terms_based = terms_based
@@ -603,7 +607,8 @@ class AnnotatedInteractionsGraph(object):
             self,
             interactions_graph,
             annotations_dict,
-            links_of_interest=None
+            links_of_interest=None,
+            stringent_coannotations=True
         ):
         """Create a new instance.
 
@@ -618,10 +623,14 @@ class AnnotatedInteractionsGraph(object):
           usage. [NOTE: Each link's terms MUST be sorted alphabetically
           (e.g., `('term1', 'term2')` and NOT `('term2',
           'term1')`!]
+        - `stringent_coannotations`: if `True` uses more stringent rules
+          about whether an interaction is co-annotated (both genes may
+          not be annotated by both terms) [default: `True`]
 
         """
         self._interactions_graph = interactions_graph
         self._annotations_dict = annotations_dict
+        self.stringent_coannotations = stringent_coannotations
         # This will contain the names of of all the terms which
         # annotate the genes.
         self._annotation_terms = set()
@@ -694,12 +703,17 @@ class AnnotatedInteractionsGraph(object):
                     self._intraterm_interactions[gene1_annotation].add(
                             i)
                     intraterm = True
-                # Avoid adding co-annotation by this pair when both
-                # genes are annotated by both terms. In other words,
-                # the interaction is co-annotated only if at least one
-                # of the terms annotates only one of the two genes.
-                elif not ((gene1_annotation in gene2_annotations) and
-                        (gene2_annotation in gene1_annotations)):
+                else:
+                    if self.stringent_coannotations:
+                        # Avoid adding co-annotation by this pair when
+                        # both genes are annotated by both terms. In
+                        # other words, the interaction is co-annotated
+                        # only if at least one of the terms annotates
+                        # only one of the two genes.
+                        if ((gene1_annotation in gene2_annotations)
+                                and
+                                (gene2_annotation in gene1_annotations)):
+                            continue
                     # We want to preserve alphabetical order of the
                     # annotations.
                     if gene1_annotation > gene2_annotation:
@@ -712,8 +726,8 @@ class AnnotatedInteractionsGraph(object):
                     if SUPERDEBUG_MODE:
                         logger.log(SUPERDEBUG, "Adding interaction "
                                 "for link %s" % (link,))
-                    self._coannotations_to_interactions[(gene1_annotation,
-                        gene2_annotation)].add(i)
+                    self._coannotations_to_interactions[
+                            (gene1_annotation, gene2_annotation)].add(i)
                     coannotated = True
 
             if coannotated:

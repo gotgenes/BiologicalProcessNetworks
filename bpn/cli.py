@@ -342,15 +342,21 @@ class McmcArgParser(ExpressionBasedArgParser):
                     "pairs of terms to use as seed for links when "
                     "initializing the Markov chain.")
         )
-        self.cli_parser.add_option('--free-parameters',
-                action='store_true',
-                help=("parameters will be adjusted randomly, rather "
-                    "than incrementally")
+        self.cli_parser.add_option('--relaxed-coannotations',
+                dest='stringent_coannotations', action='store_false',
+                default=True,
+                help=("use a more relaxed definition of co-annotation "
+                    "both genes may be annotated by both terms")
         )
         self.cli_parser.add_option('--fixed-distributions',
                 action='store_true',
                 help=("use fixed distributions for link (and term) "
                     "prior [implies --free-parameters]")
+        )
+        self.cli_parser.add_option('--free-parameters',
+                action='store_true',
+                help=("parameters will be adjusted randomly, rather "
+                    "than incrementally")
         )
         self.cli_parser.add_option('--disable-swaps', action='store_true',
                 help=("disables swapping links as an option for "
@@ -813,8 +819,9 @@ class McmcCli(ContextualCli):
                 term_prior=self.opts.term_prior,
                 seed_terms=self.seed_terms,
                 seed_links=self.seed_links,
-                free_parameters=self.opts.free_parameters,
+                stringent_coannotations=self.opts.stringent_coannotations,
                 fixed_distributions=self.opts.fixed_distributions,
+                free_parameters=self.opts.free_parameters,
                 disable_swaps=self.opts.disable_swaps,
                 terms_based=self.opts.terms_based,
                 intraterms=self.opts.intraterms,

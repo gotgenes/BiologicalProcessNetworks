@@ -85,14 +85,16 @@ def main(argv=None):
         annotated_interactions = (
                 bpn.structures.AnnotatedInteractions2dArray(
                         input_data.interactions_graph,
-                        input_data.annotations_dict
+                        input_data.annotations_dict,
+                        stringent_coannotations=input_data.stringent_coannotations
                 )
         )
     else:
         annotated_interactions = (
                 bpn.structures.AnnotatedInteractionsArray(
                         input_data.interactions_graph,
-                        input_data.annotations_dict
+                        input_data.annotations_dict,
+                        stringent_coannotations=input_data.stringent_coannotations
                 )
         )
     # Check to see whether the potential links form a single connected
