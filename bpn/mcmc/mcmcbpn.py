@@ -52,6 +52,7 @@ import recorders
 
 
 def check_link_components(annotated_interactions):
+    logger.info("Checking components and sizes of potential BPN.")
     num_terms = annotated_interactions.calc_num_terms()
     num_links = annotated_interactions.calc_num_links()
     potential_links_graph = networkx.Graph()
@@ -62,7 +63,7 @@ def check_link_components(annotated_interactions):
     component_sizes = [(c.number_of_nodes(), c.number_of_edges()) for c in
             components]
     logger.info("{0} co-annotating pairs from {1} terms.".format(
-            num_terms, num_links))
+            num_links, num_terms))
     logger.info(("Co-annotation network forms {0} connected "
         "component(s)").format(num_components))
     logger.info("Component sizes:\nNodes\tEdges\n{0}".format(
