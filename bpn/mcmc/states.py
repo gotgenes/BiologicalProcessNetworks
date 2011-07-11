@@ -825,6 +825,19 @@ class PLNLinksState(State):
         self._delta = None
 
 
+    def report_interactions(self):
+        """Have the state report the number of active and overall
+        interactions.
+
+        """
+        logger.info(("{0} interactions possible to include ({1} "
+                "active).").format(
+                    self._num_interactions,
+                    self._num_active_interactions
+                )
+        )
+
+
     def calc_num_links(self):
         """Returns thet number of possible links."""
         return len(self.process_links)
@@ -2173,6 +2186,7 @@ class PLNOverallState(State):
                 active_interactions,
                 seed_links
         )
+        self.links_state.report_interactions()
         self.parameters_state = parameters_state_class(
                 len(process_links),
                 link_false_pos,
@@ -2337,6 +2351,7 @@ class ArrayOverallState(PLNOverallState):
                 active_interactions,
                 seed_links_indices
         )
+        self.links_state.report_interactions()
         self.parameters_state = parameters_state_class(
                 num_process_links,
                 link_false_pos,
@@ -2422,6 +2437,7 @@ class TermsBasedOverallState(ArrayOverallState):
                 active_interactions,
                 seed_links_indices=seed_links_indices
         )
+        self.links_state.report_interactions()
         self.parameters_state = parameters_state_class(
                 num_process_links,
                 num_terms,
@@ -2538,6 +2554,7 @@ class IndependentTermsBasedOverallState(TermsBasedOverallState):
                 seed_terms_indices=seed_terms_indices,
                 seed_links_indices=seed_links_indices
         )
+        self.links_state.report_interactions()
         self.parameters_state = parameters_state_class(
                 num_process_links,
                 num_terms,
@@ -2626,6 +2643,7 @@ class GenesBasedOverallState(TermsBasedOverallState):
                 active_genes,
                 seed_links_indices
         )
+        self.links_state.report_interactions()
         self.parameters_state = parameters_state_class(
                 num_process_links,
                 num_terms,
