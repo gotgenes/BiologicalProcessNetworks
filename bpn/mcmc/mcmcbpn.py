@@ -309,23 +309,47 @@ def main(argv=None):
                     input_data.transitions_outfile,
                     DETAILED_TRANSITIONS_FIELDNAMES
             )
-            state_recorder = recorders.DetailedArrayStateRecorder(
-                    annotated_interactions,
-                    parameters_out_csvwriter,
-                    links_out_csvwriter,
-                    transitions_out_csvwriter
-            )
+            if input_data.frequency:
+                logger.info("Recording frequency information for each "
+                "state.")
+                state_recorder = recorders.FrequencyDetailedArrayStateRecorder(
+                        annotated_interactions,
+                        parameters_out_csvwriter,
+                        links_out_csvwriter,
+                        transitions_out_csvwriter
+                )
+            else:
+                state_recorder = recorders.DetailedArrayStateRecorder(
+                        annotated_interactions,
+                        parameters_out_csvwriter,
+                        links_out_csvwriter,
+                        transitions_out_csvwriter
+                )
         else:
             transitions_out_csvwriter = convutils.make_csv_dict_writer(
                     input_data.transitions_outfile,
-                    TRANSITIONS_FIELDNAMES
+                    TRANSITIONS_FIELDNAMES,
+                    # TODO: This is a hack to force
+                    # FrequencyDetailedArrayStateRecorder to work
+                    # without the details transitions flag
+                    extrasaction="ignore"
             )
-            state_recorder = recorders.ArrayStateRecorder(
+            if input_data.frequency:
+                logger.info("Recording frequency information for each "
+                "state.")
+                state_recorder = recorders.FrequencyDetailedArrayStateRecorder(
+                        annotated_interactions,
+                        parameters_out_csvwriter,
+                        links_out_csvwriter,
+                        transitions_out_csvwriter
+                )
+            else:
+                state_recorder = recorders.ArrayStateRecorder(
                     annotated_interactions,
                     parameters_out_csvwriter,
                     links_out_csvwriter,
                     transitions_out_csvwriter
-            )
+                )
         markov_chain = chains.ArrayMarkovChain(
                 state_recorder,
                 input_data.burn_in,
@@ -350,6 +374,7 @@ Chain information:
 """.format(chain=markov_chain))
     logger.info("Beginning to run through states in the chain. This "
             "may take a while...")
+
     markov_chain.run()
     logger.info("Run completed.")
 
@@ -375,6 +400,23 @@ Chain information:
     logger.info("Running time: {0}h {1}m {2}s".format(hours, minutes,
         seconds))
 
+    if input_data.frequency:
+        logger.info("Writing out frequency information to "
+                "{0}".format(input_data.frequency_outfile.name))
+        logging.disable(logging.INFO)
+        if "ArrayMarkovChain" in markov_chain.__class__.__name__:
+            markov_chain.state_recorder.write_state_likelihoods(
+                    input_data.frequency_outfile,
+                    input_data.activity_threshold,
+                    input_data.transition_ratio,
+                    input_data.link_false_pos,
+                    input_data.link_false_neg,
+                    input_data.link_prior,
+                    parameters_state_class,
+                    links_state_class
+            )
+        logging.disable(0)
+        logger.info("Frequency information has finished.")
 
 if __name__ == '__main__':
     main()

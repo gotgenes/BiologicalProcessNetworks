@@ -10,7 +10,7 @@
 """State recorders for BPN states."""
 
 import collections
-
+import chains
 import numpy
 
 import logging
@@ -149,7 +149,6 @@ class DetailedStateRecord(OverallStateRecord):
         }
         d.update(additional)
         return d
-
 
 class TermsStateRecord(DetailedStateRecord):
     __slots__ = (
@@ -653,6 +652,125 @@ class DetailedArrayStateRecorder(ArrayStateRecorder):
         self._transitions_data.append(record)
 
 
+class FrequencyDetailedArrayStateRecorder(DetailedArrayStateRecorder):
+    """Similar to 'DetailedArrayStateRecorder', only that is records
+    information regarding the frequency of each and every state visited.
+    More specifically, if the newly suggeseted state is the same as
+    the old state, then we still count the new state as having visited
+    a new state.
+
+    """
+    def __init__(
+            self,
+            annotated_interactions,
+            parameters_csvwriter,
+            links_csvwriter,
+            transitions_csvwriter,
+            transitions_buffer_size=TRANSITIONS_BUFFER_SIZE
+        ):
+        """Create a new instance.
+
+        :Parameters:
+        - `annotated_interactions`: an `AnnotatedInteractionsArray`
+          instance
+        - `parameter_distributions`: a dictionary with the names of the
+          parameters and their possible distribution values
+
+        """
+        super(FrequencyDetailedArrayStateRecorder, self).__init__(
+            annotated_interactions, parameters_csvwriter,
+            links_csvwriter, transitions_csvwriter,
+            transitions_buffer_size
+        )
+        self.annotated_interactions = annotated_interactions
+        self.state_every_frequency_map = collections.defaultdict(int)
+        self.state_partial_frequency_map = collections.defaultdict(int)
+        self.num_states_visited = 0
+
+
+    def write_state_likelihoods(self, file_handler, activity_threshold,
+            transition_ratio, link_false_pos, link_false_neg,
+            link_prior, parameters_state_class, links_state_class):
+        """Calculates the likelihood from the visited states. A tab
+        delimited file is output containing the likelihood of each
+        state visited, the number of times each state was visited,
+        and the probability visiting a state. Probability of visiting a
+        state is calculated by dividing the number of times of a state
+        is visited by the total number of states visited or steps.
+
+        """
+        # The following code traverses the entire hash map of
+        # states(state_every_frequency_map) that have been visited. To
+        # calculate the likelihood from each state that is visited,
+        # a markov_chain is created. However, the markov_chain accepts
+        # an array of indices as seed links and the hash map has the
+        # indices stored as an array of booleans. Therefore, we convert
+        # the array of booleans into an array of indices that correspond to
+        # the links that are selected for the given state.
+        file_handler.write("state_likelihood\tevery_visitation_count"
+        "\tpartial_visitation_count\tprobability\n")
+
+        markov_chain = None
+        for tupled_state_key, visitation_count in self.state_every_frequency_map.items():
+            seed_links = []
+            for index, link in enumerate(tupled_state_key):
+                if link == True:
+                    seed_links.append(index)
+
+            markov_chain = chains.ArrayMarkovChain(
+                self,
+                1,
+                1,
+                self.annotated_interactions,
+                activity_threshold,
+                transition_ratio,
+                seed_links_indices=seed_links,
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
+                link_prior=link_prior,
+                parameters_state_class=parameters_state_class,
+                links_state_class=links_state_class
+            )
+
+            file_handler.write(str(markov_chain.current_state.calc_log_likelihood())
+                + '\t' + str(visitation_count) + '\t' +
+                str(self.state_partial_frequency_map[tupled_state_key])
+                + '\t' + str(visitation_count / float(self.num_states_visited))
+                + '\n')
+
+
+    def record_frequency(self, markov_chain):
+        """Record the links selected in this state through the
+        super and also record the number of times this state
+        has been selected.
+
+        :Parameters:
+        - `links_state`: a `PLNLinksState` instance
+
+        """
+        links_state = markov_chain.current_state.links_state
+        # Only record those states that are not the same as the previous state
+        if markov_chain.last_transition_info[3]:
+            self.state_partial_frequency_map[tuple(links_state.link_selections)] += 1
+
+        # Record every state that is visited regardless of previous state
+        self.state_every_frequency_map[tuple(links_state.link_selections)] += 1
+        # Keep track of the number of states visited
+        self.num_states_visited += 1
+
+
+    def record_state(self, markov_chain):
+        """Record the features of the current state.
+
+        :Parameters:
+        - `markov_chain`: a `PLNMarkovChain` instance
+
+        """
+        super(FrequencyDetailedArrayStateRecorder,
+                self).record_state(markov_chain)
+        self.record_frequency(markov_chain)
+
+
 class TermsBasedStateRecorder(ArrayStateRecorder):
     """Similar to `PLNStateRecorder`, however, adapted to record the
     state of `TermsBasedOverallState` instances.
@@ -799,6 +917,130 @@ class TermsBasedStateRecorder(ArrayStateRecorder):
             self.links_csvwriter.writerows(output_records)
 
 
+class TermsBasedFrequencyStateRecorder(TermsBasedStateRecorder,
+        FrequencyDetailedArrayStateRecorder):
+    """Similar to 'FrequencyDetailedArrayStateRecorder', only that it
+    records information regarding the frequency the markov chain visits
+    each state.
+
+    """
+    def __init__(
+            self,
+            annotated_interactions,
+            parameters_csvwriter,
+            links_csvwriter,
+            terms_csvwriter,
+            transitions_csvwriter,
+            transitions_buffer_size=TRANSITIONS_BUFFER_SIZE
+        ):
+        """Create a new instance.
+
+        :Parameters:
+        - `annotated_interactions`: an `AnnotatedInteractionsGraph`
+          instance
+        - `parameters_csvwriter`: a `csv.DictWriter` instance for
+          outputting parameter results with these fields:
+          ``'parameter'``, ``'value'``, ``'probability'``
+        - `links_csvwriter`: a `csv.DictWriter` instance for
+          outputting links results ``'term1'``, ``'term2'``,
+          ``'probability'``
+        - `terms_csvwriter`: a `csv.DictWriter` instance for
+          outputting terms results with these fields: ``'term'``,
+          ``'probability'``
+        - `transitions_csvwriter`: a `csv.DictWriter` instance for
+          outputting transitions data
+        - `transitions_buffer_size`: number of records to maintain
+
+        """
+        TermsBasedStateRecorder.__init__(
+            self,
+            annotated_interactions,
+            parameters_csvwriter,
+            links_csvwriter,
+            terms_csvwriter,
+            transitions_csvwriter,
+            transitions_buffer_size
+        )
+        self.state_every_frequency_map = collections.defaultdict(int)
+        self.state_partial_frequency_map = collections.defaultdict(int)
+        self.previous_link_selection = None
+        self.num_states_visited = 0
+
+
+    def record_links_state(self, links_state):
+        """Record the links selected in this state through the
+        super and also record the number of times this state
+        has been selected.
+
+        :Parameters:
+        - `links_state`: a `PLNLinksState` instance
+
+        """
+
+        super(FrequencyDetailedArrayStateRecorder, self).record_links_state(
+                links_state)
+        # Only record those states that are not the same as the previous state
+        if self.previous_link_selection == None:
+            self.previous_link_selection = links_state.link_selections
+        elif (cmp(self.previous_link_selection.all(), links_state.link_selections.all())) == 0:
+            self.state_partial_frequency_map[tuple(links_state.link_selections)] += 1
+            self.previous_link_selection = links_state.link_selections
+
+        # Record every state that is visited regardless of previous state
+        self.state_every_frequency_map[tuple(links_state.link_selections)] += 1
+        self.num_states_visited += 1
+
+
+    def write_state_likelihoods(self, file_handler, activity_threshold,
+            transition_ratio, link_false_pos, link_false_neg,
+            link_prior, term_prior, parameters_state_class, links_state_class):
+        """Calculates the likelihood from the visited states. A tab
+        delimited file is output containing the likelihood of each
+        state visited, the number of times each state was visited,
+        and the probability visiting a state. Probability of visiting a
+        state is calculated by dividing the number of times of a state
+        is visited by the total number of states visited or steps.
+
+        """
+        # The following code traverses the entire hash map of
+        # states(state_every_frequency_map) that have been visited. To
+        # calculate the likelihood from each state that is visited,
+        # a markov_chain is created. However, the markov_chain accepts
+        # an array of indices as seed links and the hash map has the
+        # indices stored as an array of booleans. Therefore, we convert
+        # the array of booleans into an array of indices that correspond to
+        # the links that are selected for the given state.
+        markov_chain = None
+        for tupled_state_key, visitation_count in self.state_every_frequency_map.items():
+            seed_links = []
+            for index, link in enumerate(tupled_state_key):
+                if link == True:
+                    seed_links.append(index)
+
+            markov_chain = chains.TermsBasedMarkovChain(
+                self,
+                1,
+                1,
+                self.annotated_interactions,
+                activity_threshold,
+                transition_ratio,
+                seed_links_indices=seed_links,
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
+                link_prior=link_prior,
+                term_prior=term_prior,
+                parameters_state_class=parameters_state_class,
+                links_state_class=links_state_class
+            )
+
+            file_handler.write(str(markov_chain.current_state.calc_log_likelihood())
+                + '\t' + str(visitation_count) + '\t' +
+                str(self.state_partial_frequency_map[tupled_state_key])
+                + '\t' + str(visitation_count / float(self.num_states_visited))
+                + '\n')
+
+
+
 class DetailedTermsBasedStateRecorder(TermsBasedStateRecorder):
     """Similar to `TermsBasedStateRecorder`, but records more
     information about each state.
@@ -919,3 +1161,244 @@ class DetailedGenesBasedStateRecorder(
         )
         self._transitions_data.append(record)
 
+
+#class TermsBasedFrequencyStateRecorder(TermsBasedStateRecorder,
+        #FrequencyDetailedArrayStateRecorder):
+    #"""Similar to 'FrequencyDetailedArrayStateRecorder', only that it
+    #records information regarding the frequency the markov chain visits
+    #each state.
+
+    #"""
+    #def __init__(
+            #self,
+            #annotated_interactions,
+            #parameters_csvwriter,
+            #links_csvwriter,
+            #terms_csvwriter,
+            #transitions_csvwriter,
+            #transitions_buffer_size=TRANSITIONS_BUFFER_SIZE
+        #):
+        #"""Create a new instance.
+
+        #:Parameters:
+        #- `annotated_interactions`: an `AnnotatedInteractionsGraph`
+          #instance
+        #- `parameters_csvwriter`: a `csv.DictWriter` instance for
+          #outputting parameter results with these fields:
+          #``'parameter'``, ``'value'``, ``'probability'``
+        #- `links_csvwriter`: a `csv.DictWriter` instance for
+          #outputting links results ``'term1'``, ``'term2'``,
+          #``'probability'``
+        #- `terms_csvwriter`: a `csv.DictWriter` instance for
+          #outputting terms results with these fields: ``'term'``,
+          #``'probability'``
+        #- `transitions_csvwriter`: a `csv.DictWriter` instance for
+          #outputting transitions data
+        #- `transitions_buffer_size`: number of records to maintain
+
+        #"""
+        #TermsBasedStateRecorder.__init__(
+            #self,
+            #annotated_interactions,
+            #parameters_csvwriter,
+            #links_csvwriter,
+            #terms_csvwriter,
+            #transitions_csvwriter,
+            #transitions_buffer_size
+        #)
+        #self.state_every_frequency_map = collections.defaultdict(int)
+        #self.state_partial_frequency_map = collections.defaultdict(int)
+        #self.previous_link_selection = None
+        #self.num_states_visited = 0
+
+
+    #def record_links_state(self, links_state):
+        #"""Record the links selected in this state through the
+        #super and also record the number of times this state
+        #has been selected.
+
+        #:Parameters:
+        #- `links_state`: a `PLNLinksState` instance
+
+        #"""
+
+        #super(FrequencyDetailedArrayStateRecorder, self).record_links_state(
+                #links_state)
+        ## Only record those states that are not the same as the previous state
+        #if self.previous_link_selection == None:
+            #self.previous_link_selection = links_state.link_selections
+        #elif (cmp(self.previous_link_selection.all(), links_state.link_selections.all())) == 0:
+            #self.state_partial_frequency_map[tuple(links_state.link_selections)] += 1
+            #self.previous_link_selection = links_state.link_selections
+
+        ## Record every state that is visited regardless of previous state
+        #self.state_every_frequency_map[tuple(links_state.link_selections)] += 1
+        #self.num_states_visited += 1
+
+
+    #def write_state_likelihoods(self, file_handler, activity_threshold,
+            #transition_ratio, link_false_pos, link_false_neg,
+            #link_prior, term_prior, parameters_state_class, links_state_class):
+        #"""Calculates the likelihood from the visited states. A tab
+        #delimited file is output containing the likelihood of each
+        #state visited, the number of times each state was visited,
+        #and the probability visiting a state. Probability of visiting a
+        #state is calculated by dividing the number of times of a state
+        #is visited by the total number of states visited or steps.
+
+        #"""
+        ## The following code traverses the entire hash map of
+        ## states(state_every_frequency_map) that have been visited. To
+        ## calculate the likelihood from each state that is visited,
+        ## a markov_chain is created. However, the markov_chain accepts
+        ## an array of indices as seed links and the hash map has the
+        ## indices stored as an array of booleans. Therefore, we convert
+        ## the array of booleans into an array of indices that correspond to
+        ## the links that are selected for the given state.
+        #markov_chain = None
+        #for tupled_state_key, visitation_count in self.state_every_frequency_map.items():
+            #seed_links = []
+            #for index, link in enumerate(tupled_state_key):
+                #if link == True:
+                    #seed_links.append(index)
+
+            #markov_chain = chains.TermsBasedMarkovChain(
+                #self,
+                #1,
+                #1,
+                #self.annotated_interactions,
+                #activity_threshold,
+                #transition_ratio,
+                #seed_links_indices=seed_links,
+                #link_false_pos=link_false_pos,
+                #link_false_neg=link_false_neg,
+                #link_prior=link_prior,
+                #term_prior=term_prior,
+                #parameters_state_class=parameters_state_class,
+                #links_state_class=links_state_class
+            #)
+
+            #file_handler.write(str(markov_chain.current_state.calc_log_likelihood())
+                #+ '\t' + str(visitation_count) + '\t' +
+                #str(self.state_partial_frequency_map[tupled_state_key])
+                #+ '\t' + str(visitation_count / float(self.num_states_visited))
+                #+ '\n')
+
+
+class FrequencyDetailedArrayStateRecorder(DetailedArrayStateRecorder):
+    """Similar to 'DetailedArrayStateRecorder', only that is records
+    information regarding the frequency of each and every state visited.
+    More specifically, if the newly suggeseted state is the same as
+    the old state, then we still count the new state as having visited
+    a new state.
+
+    """
+    def __init__(
+            self,
+            annotated_interactions,
+            parameters_csvwriter,
+            links_csvwriter,
+            transitions_csvwriter,
+            transitions_buffer_size=TRANSITIONS_BUFFER_SIZE
+        ):
+        """Create a new instance.
+
+        :Parameters:
+        - `annotated_interactions`: an `AnnotatedInteractionsArray`
+          instance
+        - `parameter_distributions`: a dictionary with the names of the
+          parameters and their possible distribution values
+
+        """
+        super(FrequencyDetailedArrayStateRecorder, self).__init__(
+            annotated_interactions, parameters_csvwriter,
+            links_csvwriter, transitions_csvwriter,
+            transitions_buffer_size
+        )
+        self.annotated_interactions = annotated_interactions
+        self.state_every_frequency_map = collections.defaultdict(int)
+        self.state_partial_frequency_map = collections.defaultdict(int)
+        self.num_states_visited = 0
+
+
+    def write_state_likelihoods(self, file_handler, activity_threshold,
+            transition_ratio, link_false_pos, link_false_neg,
+            link_prior, parameters_state_class, links_state_class):
+        """Calculates the likelihood from the visited states. A tab
+        delimited file is output containing the likelihood of each
+        state visited, the number of times each state was visited,
+        and the probability visiting a state. Probability of visiting a
+        state is calculated by dividing the number of times of a state
+        is visited by the total number of states visited or steps.
+
+        """
+        # The following code traverses the entire hash map of
+        # states(state_every_frequency_map) that have been visited. To
+        # calculate the likelihood from each state that is visited,
+        # a markov_chain is created. However, the markov_chain accepts
+        # an array of indices as seed links and the hash map has the
+        # indices stored as an array of booleans. Therefore, we convert
+        # the array of booleans into an array of indices that correspond to
+        # the links that are selected for the given state.
+        file_handler.write("state_likelihood\tevery_visitation_count"
+        "\tpartial_visitation_count\tprobability\n")
+
+        markov_chain = None
+        for tupled_state_key, visitation_count in self.state_every_frequency_map.items():
+            seed_links = []
+            for index, link in enumerate(tupled_state_key):
+                if link == True:
+                    seed_links.append(index)
+
+            markov_chain = chains.ArrayMarkovChain(
+                self,
+                1,
+                1,
+                self.annotated_interactions,
+                activity_threshold,
+                transition_ratio,
+                seed_links_indices=seed_links,
+                link_false_pos=link_false_pos,
+                link_false_neg=link_false_neg,
+                link_prior=link_prior,
+                parameters_state_class=parameters_state_class,
+                links_state_class=links_state_class
+            )
+
+            file_handler.write(str(markov_chain.current_state.calc_log_likelihood())
+                + '\t' + str(visitation_count) + '\t' +
+                str(self.state_partial_frequency_map[tupled_state_key])
+                + '\t' + str(visitation_count / float(self.num_states_visited))
+                + '\n')
+
+
+    def record_frequency(self, markov_chain):
+        """Record the links selected in this state through the
+        super and also record the number of times this state
+        has been selected.
+
+        :Parameters:
+        - `links_state`: a `PLNLinksState` instance
+
+        """
+        links_state = markov_chain.current_state.links_state
+        # Only record those states that are not the same as the previous state
+        if markov_chain.last_transition_info[3]:
+            self.state_partial_frequency_map[tuple(links_state.link_selections)] += 1
+
+        # Record every state that is visited regardless of previous state
+        self.state_every_frequency_map[tuple(links_state.link_selections)] += 1
+        # Keep track of the number of states visited
+        self.num_states_visited += 1
+
+
+    def record_state(self, markov_chain):
+        """Record the features of the current state.
+
+        :Parameters:
+        - `markov_chain`: a `PLNMarkovChain` instance
+
+        """
+        super(FrequencyDetailedArrayStateRecorder,
+                self).record_state(markov_chain)
+        self.record_frequency(markov_chain)

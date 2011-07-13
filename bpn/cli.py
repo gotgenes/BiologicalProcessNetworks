@@ -403,7 +403,15 @@ class McmcArgParser(ExpressionBasedArgParser):
         self.cli_parser.add_option('--bzip2', action='store_true',
                 help="compress transitions file using bzip2"
         )
-
+        self.cli_parser.add_option('--frequency',
+                action='store_true',
+                help="records the frequencies of states."
+        )
+        self.cli_parser.add_option('--frequency-outfile',
+                default=mcmc.defaults.FREQUENCY_OUTFILE,
+                help=("the file to which frequency information "
+                    "should be written [default: %default")
+        )
 
 class SaArgParser(ExpressionBasedArgParser):
     """Command line parser for SA BPLN."""
@@ -795,6 +803,10 @@ class McmcCli(ContextualCli):
         else:
             self.transitions_outfile = open(
                     self.opts.transitions_outfile, 'wb')
+        if self.opts.frequency:
+            self.frequency_outfile = open(self.opts.frequency_outfile, 'wb')
+        else:
+            self.frequency_outfile = None
 
 
     def _construct_links_of_interest(self):
@@ -832,7 +844,9 @@ class McmcCli(ContextualCli):
                 links_outfile=self.links_outfile,
                 transitions_outfile=self.transitions_outfile,
                 parameters_outfile=self.parameters_outfile,
-                detailed_transitions=self.opts.detailed_transitions
+                detailed_transitions=self.opts.detailed_transitions,
+                frequency=self.opts.frequency,
+                frequency_outfile=self.frequency_outfile
         )
         return data
 
