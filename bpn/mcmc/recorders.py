@@ -1344,11 +1344,12 @@ class FrequencyDetailedArrayStateRecorder(DetailedArrayStateRecorder):
         "\tpartial_visitation_count\tprobability\n")
 
         markov_chain = None
-        for tupled_state_key, visitation_count in self.state_every_frequency_map.items():
-            seed_links = []
-            for index, link in enumerate(tupled_state_key):
-                if link == True:
-                    seed_links.append(index)
+        for state_key, visitation_count in self.state_every_frequency_map.items():
+            # Reconstitute the array
+            links_state_array = numpy.fromstring(state_key, dtype=bool)
+            # This gets all the indices of the links included in that
+            # state (any index that is `True`
+            seed_links = numpy.where(links_state_array)[0]
 
             markov_chain = chains.ArrayMarkovChain(
                 self,
@@ -1367,7 +1368,7 @@ class FrequencyDetailedArrayStateRecorder(DetailedArrayStateRecorder):
 
             file_handler.write(str(markov_chain.current_state.calc_log_likelihood())
                 + '\t' + str(visitation_count) + '\t' +
-                str(self.state_partial_frequency_map[tupled_state_key])
+                str(self.state_partial_frequency_map[state_key])
                 + '\t' + str(visitation_count / float(self.num_states_visited))
                 + '\n')
 
@@ -1381,13 +1382,14 @@ class FrequencyDetailedArrayStateRecorder(DetailedArrayStateRecorder):
         - `links_state`: a `PLNLinksState` instance
 
         """
-        links_state = markov_chain.current_state.links_state
+        link_selections_key = (
+                markov_chain.current_state.links_state.link_selections.tostring())
         # Only record those states that are not the same as the previous state
         if markov_chain.last_transition_info[3]:
-            self.state_partial_frequency_map[tuple(links_state.link_selections)] += 1
+            self.state_partial_frequency_map[link_selections_key] += 1
 
         # Record every state that is visited regardless of previous state
-        self.state_every_frequency_map[tuple(links_state.link_selections)] += 1
+        self.state_every_frequency_map[link_selections_key] += 1
         # Keep track of the number of states visited
         self.num_states_visited += 1
 
@@ -1402,3 +1404,4 @@ class FrequencyDetailedArrayStateRecorder(DetailedArrayStateRecorder):
         super(FrequencyDetailedArrayStateRecorder,
                 self).record_state(markov_chain)
         self.record_frequency(markov_chain)
+
