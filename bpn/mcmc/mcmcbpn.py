@@ -16,6 +16,7 @@ Monte Carlo technique.
 import collections
 import datetime
 import itertools
+import random
 import sys
 
 from convutils import convutils
@@ -49,6 +50,26 @@ if SUPERDEBUG_MODE:
 import chains
 import states
 import recorders
+
+
+def create_seed_value():
+    """Creates a seed value for the `random` module, should one not be
+    provided by the user.
+
+    This code is simply a reproduction of the code from random.py in the
+    standard library.
+
+    Returns a seed value.
+
+    """
+    from binascii import hexlify as _hexlify
+    from os import urandom as _urandom
+    try:
+        seed = long(_hexlify(_urandom(16)), 16)
+    except NotImplementedError:
+        import time
+        seed = long(time.time() * 256) # use fractional seconds
+    return seed
 
 
 def check_link_components(annotated_interactions):
@@ -101,6 +122,13 @@ def main(argv=None):
     # Check to see whether the potential links form a single connected
     # component.
     check_link_components(annotated_interactions)
+
+    # TODO: check a command line option to see if the user input a seed;
+    # for now, we'll just generate one all the time and report it.
+    random_seed = create_seed_value()
+    logger.info("The random seed value for this run is {0}.".format(
+            random_seed))
+    random.seed(random_seed)
 
     logger.info("Constructing the Markov chain.")
     # Prepare the CSV writers for the state recorder.
