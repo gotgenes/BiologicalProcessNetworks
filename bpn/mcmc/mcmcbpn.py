@@ -419,15 +419,6 @@ Chain information:
     markov_chain.state_recorder.write_transition_states()
     logger.info("Transitions data written to {0}.".format(
             input_data.transitions_outfile.name))
-    ending_time = datetime.datetime.now()
-    logger.info("Finished.")
-    running_time = ending_time - starting_time
-    hours, remainder = divmod(running_time.seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    hours += running_time.days * 24
-    logger.info("Running time: {0}h {1}m {2}s".format(hours, minutes,
-        seconds))
-
     if input_data.frequency:
         logger.info("Writing out frequency information to "
                 "{0}".format(input_data.frequency_outfile.name))
@@ -445,6 +436,15 @@ Chain information:
             )
         logging.disable(0)
         logger.info("Frequency information has finished.")
+
+    ending_time = datetime.datetime.now()
+    logger.info("Finished.")
+    running_time = ending_time - starting_time
+    hours, remainder = divmod(running_time.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    hours += running_time.days * 24
+    logger.info("Running time: {0}h {1}m {2}s".format(hours, minutes,
+        seconds))
 
 if __name__ == '__main__':
     main()
