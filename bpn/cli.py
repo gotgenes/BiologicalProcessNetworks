@@ -403,14 +403,14 @@ class McmcArgParser(ExpressionBasedArgParser):
         self.cli_parser.add_option('--bzip2', action='store_true',
                 help="compress transitions file using bzip2"
         )
-        self.cli_parser.add_option('--frequency',
+        self.cli_parser.add_option('--record-frequencies',
                 action='store_true',
-                help="records the frequencies of states."
+                help="record the frequency of each state"
         )
-        self.cli_parser.add_option('--frequency-outfile',
-                default=mcmc.defaults.FREQUENCY_OUTFILE,
+        self.cli_parser.add_option('--frequencies-outfile',
+                default=mcmc.defaults.FREQUENCIES_OUTFILE,
                 help=("the file to which frequency information "
-                    "should be written [default: %default")
+                    "should be written [default: %default]")
         )
 
 class SaArgParser(ExpressionBasedArgParser):
@@ -803,10 +803,10 @@ class McmcCli(ContextualCli):
         else:
             self.transitions_outfile = open(
                     self.opts.transitions_outfile, 'wb')
-        if self.opts.frequency:
-            self.frequency_outfile = open(self.opts.frequency_outfile, 'wb')
+        if self.opts.record_frequencies:
+            self.frequencies_outfile = open(self.opts.frequencies_outfile, 'wb')
         else:
-            self.frequency_outfile = None
+            self.frequencies_outfile = None
 
 
     def _construct_links_of_interest(self):
@@ -845,8 +845,8 @@ class McmcCli(ContextualCli):
                 transitions_outfile=self.transitions_outfile,
                 parameters_outfile=self.parameters_outfile,
                 detailed_transitions=self.opts.detailed_transitions,
-                frequency=self.opts.frequency,
-                frequency_outfile=self.frequency_outfile
+                record_frequencies=self.opts.record_frequencies,
+                frequencies_outfile=self.frequencies_outfile
         )
         return data
 

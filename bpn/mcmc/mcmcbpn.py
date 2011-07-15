@@ -337,7 +337,7 @@ def main(argv=None):
                     input_data.transitions_outfile,
                     DETAILED_TRANSITIONS_FIELDNAMES
             )
-            if input_data.frequency:
+            if input_data.record_frequencies:
                 logger.info("Recording frequency information for each "
                 "state.")
                 state_recorder = recorders.FrequencyDetailedArrayStateRecorder(
@@ -362,7 +362,7 @@ def main(argv=None):
                     # without the details transitions flag
                     extrasaction="ignore"
             )
-            if input_data.frequency:
+            if input_data.record_frequencies:
                 logger.info("Recording frequency information for each "
                 "state.")
                 state_recorder = recorders.FrequencyDetailedArrayStateRecorder(
@@ -419,12 +419,12 @@ Chain information:
     markov_chain.state_recorder.write_transition_states()
     logger.info("Transitions data written to {0}.".format(
             input_data.transitions_outfile.name))
-    if input_data.frequency:
+    if input_data.record_frequencies:
         logger.info("Writing state frequencies to {0}".format(
-                input_data.frequency_outfile.name))
+                input_data.frequencies_outfile.name))
         if "ArrayMarkovChain" in markov_chain.__class__.__name__:
             markov_chain.state_recorder.write_state_frequencies(
-                    input_data.frequency_outfile,
+                    input_data.frequencies_outfile,
                     input_data.activity_threshold,
                     input_data.transition_ratio,
                     input_data.link_false_pos,

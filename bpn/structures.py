@@ -390,8 +390,8 @@ class McmcInputData(BplnInputData):
             parameters_outfile,
             transitions_outfile,
             detailed_transitions,
-            frequency,
-            frequency_outfile,
+            record_frequencies,
+            frequencies_outfile,
             **kwargs
         ):
         """Create a new instance.
@@ -445,9 +445,11 @@ class McmcInputData(BplnInputData):
         - `transitions_outfile`: file for output of transitions data
         - `detailed_transitions`: `True` if detailed output of the
           transitions is desired, `False` otherwise
-        - `frequency`: record frequency of the states
-        - `frequency_outfile`: the file with which to write frequency
+        - `record_frequencies`: `True` if frequency of the states should
+          be recorded
+        - `frequencies_outfile`: the file with which to write frequency
             information to
+
         """
         super(McmcInputData, self).__init__(
             interactions_graph=interactions_graph,
@@ -486,8 +488,9 @@ class McmcInputData(BplnInputData):
         self.parameters_outfile = parameters_outfile
         self.transitions_outfile = transitions_outfile
         self.detailed_transitions = detailed_transitions
-        self.frequency = frequency
-        self.frequency_outfile = frequency_outfile
+        self.record_frequencies = record_frequencies
+        self.frequencies_outfile = frequencies_outfile
+
 
 class SaInputData(BplnInputData):
     def __init__(

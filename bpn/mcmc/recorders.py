@@ -961,7 +961,7 @@ class FrequencyDetailedArrayStateRecorder(DetailedArrayStateRecorder):
         self.state_arrival_frequencies = collections.defaultdict(int)
 
 
-    def record_frequency(self, markov_chain):
+    def record_state_frequency(self, markov_chain):
         """Record the links selected in this state through the
         super and also record the number of times this state
         has been selected.
@@ -994,7 +994,7 @@ class FrequencyDetailedArrayStateRecorder(DetailedArrayStateRecorder):
         """
         super(FrequencyDetailedArrayStateRecorder, self).record_state(
                 markov_chain)
-        self.record_frequency(markov_chain)
+        self.record_state_frequency(markov_chain)
 
 
     def write_state_frequencies(

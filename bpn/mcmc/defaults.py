@@ -61,7 +61,7 @@ DETAILED_TRANSITIONS_FIELDNAMES = TRANSITIONS_FIELDNAMES + [
         'num_unselected_inactive_interactions'
 ]
 
-FREQUENCY_OUTFILE = 'state_frequency.tsv'
+FREQUENCIES_OUTFILE = 'state_frequencies.tsv'
 
 TERMS_OUTFILE = 'terms_results.tsv'
 TERMS_BASED_TRANSITIONS_FIELDNAMES = DETAILED_TRANSITIONS_FIELDNAMES[:]
