@@ -102,6 +102,7 @@ class PLNMarkovChain(MarkovChain):
         # the transition was rejected, or `False`, representing that the
         # transition was accepted.
         self.last_transition_info = None
+        self.current_step = None
 
 
     def calc_log_transition_ratio(self, proposed_state):
@@ -204,6 +205,18 @@ class PLNMarkovChain(MarkovChain):
 
         logger.debug("Log of state likelihood: %s" % (
                 log_state_likelihood))
+        # In a special case, if this is the very first step of the
+        # actual recorded steps (i.e., the first step taken after the
+        # burn in period), we want to make sure that it's marked as
+        # "accepted" because this is the first time in the records that
+        # we will have seen this state (even if it was the last state
+        # seen in the burn-in)
+        if self.current_step == 0:
+            accepted = True
+        # NOTE: if changing the order of any of these items, please make
+        # sure to update code in recorders.py!!!
+        # In the future, consider using a named-tuple instead of a
+        # normal tuple for this data structure.
         self.last_transition_info = (
                 proposed_transition_type,
                 log_transition_ratio,
@@ -239,6 +252,7 @@ class PLNMarkovChain(MarkovChain):
         self.burn_in_period = False
         broadcast_percent_complete = 0
         for i in xrange(self.num_steps):
+            self.current_step = i
             logger.debug("Step %d of %d" % (i + 1, self.num_steps))
             self.next_state()
             self.state_recorder.record_state(self)
@@ -318,6 +332,7 @@ class ArrayMarkovChain(PLNMarkovChain):
         self.num_steps = num_steps
         self.burn_in_period = True
         self.last_transition_info = None
+        self.current_step = None
 
 
 class TermsBasedMarkovChain(ArrayMarkovChain):
@@ -394,6 +409,7 @@ class TermsBasedMarkovChain(ArrayMarkovChain):
         self.num_steps = num_steps
         self.burn_in_period = True
         self.last_transition_info = None
+        self.current_step = None
 
 
 class IndependentTermsBasedMarkovChain(TermsBasedMarkovChain):
@@ -473,6 +489,7 @@ class IndependentTermsBasedMarkovChain(TermsBasedMarkovChain):
         self.num_steps = num_steps
         self.burn_in_period = True
         self.last_transition_info = None
+        self.current_step = None
 
 
 class GenesBasedMarkovChain(IndependentTermsBasedMarkovChain):
@@ -560,5 +577,6 @@ class GenesBasedMarkovChain(IndependentTermsBasedMarkovChain):
         self.num_steps = num_steps
         self.burn_in_period = True
         self.last_transition_info = None
+        self.current_step = None
 
 

@@ -420,11 +420,10 @@ Chain information:
     logger.info("Transitions data written to {0}.".format(
             input_data.transitions_outfile.name))
     if input_data.frequency:
-        logger.info("Writing out frequency information to "
-                "{0}".format(input_data.frequency_outfile.name))
-        logging.disable(logging.INFO)
+        logger.info("Writing state frequencies to {0}".format(
+                input_data.frequency_outfile.name))
         if "ArrayMarkovChain" in markov_chain.__class__.__name__:
-            markov_chain.state_recorder.write_state_likelihoods(
+            markov_chain.state_recorder.write_state_frequencies(
                     input_data.frequency_outfile,
                     input_data.activity_threshold,
                     input_data.transition_ratio,
@@ -434,8 +433,7 @@ Chain information:
                     parameters_state_class,
                     links_state_class
             )
-        logging.disable(0)
-        logger.info("Frequency information has finished.")
+        logger.info("State frequencies written.")
 
     ending_time = datetime.datetime.now()
     logger.info("Finished.")
