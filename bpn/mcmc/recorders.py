@@ -953,7 +953,7 @@ class FrequencyDetailedArrayStateRecorder(DetailedArrayStateRecorder):
         self.annotated_interactions = annotated_interactions
         # state_frequencies stores the number of steps in which each
         # state has been observed
-        self.state_frequencies = collections.defaultdict(int)
+        self.state_frequencies = {}
         # state_arrival_frequencies stores for each state the number of
         # steps in which it was a state in the current step but not in
         # the previous step (the number of steps the chain "arrived" at
@@ -970,19 +970,22 @@ class FrequencyDetailedArrayStateRecorder(DetailedArrayStateRecorder):
         - `links_state`: a `PLNLinksState` instance
 
         """
-        # We'll simply use the likelihood as the key, since we're more
-        # concerned about the correlation between likelihood and visits
-        # and not so much visits to specific states.
-        state_key = markov_chain.last_transition_info[2]
+        state_key = markov_chain.current_state.serialize_state()
+        state_log_likelihood = markov_chain.last_transition_info[2]
+
         # If we didn't see this state in the previous step, increment
         # the arrival count.
-        # NOTE: the fourth item in the transition is whether or not it
-        # was accepted.
+        # NOTE: the fourth item in the transition information tells
+        # whether or not the last transition was accepted.
         if markov_chain.last_transition_info[3]:
             self.state_arrival_frequencies[state_key] += 1
 
         # Record every state that is visited regardless of previous state
-        self.state_frequencies[state_key] += 1
+        if state_key in self.state_frequencies:
+            self.state_frequencies[state_key][1] += 1
+        else:
+            self.state_frequencies[state_key] = [state_log_likelihood,
+                    1]
 
 
     def record_state(self, markov_chain):
@@ -1033,15 +1036,11 @@ class FrequencyDetailedArrayStateRecorder(DetailedArrayStateRecorder):
         "frequency_proportion\tarrival_frequency\t"
         "arrival_frequency_proportion\n")
 
-        # NOTE: We assume the keys of state_frequencies are floats
-        # representing the log-likelihoods of the states.
-        state_keys = self.state_frequencies.keys()
-        state_keys.sort(reverse=True)
-        for state_key in state_keys:
-            frequency = self.state_frequencies[state_key]
+        for state_key in self.state_frequencies.iterkeys():
+            log_likelihood, frequency = self.state_frequencies[state_key]
             arrival_frequency = self.state_arrival_frequencies[state_key]
             record = {
-                    'log_likelihood': state_key,
+                    'log_likelihood': log_likelihood,
                     'frequency': frequency,
                     'frequency_proportion': (frequency /
                             total_states),
