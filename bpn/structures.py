@@ -14,6 +14,7 @@ import collections
 import itertools
 import random
 
+import bitarray
 import networkx
 import numpy
 
@@ -1369,4 +1370,45 @@ class AnnotatedInteractions2dArray(AnnotatedInteractionsGraph):
             self._num_annotation_pairs = len(
                     numpy.triu(self._links_to_interactions).nonzero()[0])
         return self._num_annotation_pairs
+
+
+# The following class is derived from aix's answer on Stack Overflow.
+# See http://stackoverflow.com/questions/6694835/efficient-serialization-of-numpy-boolean-arrays
+class BoolBitArray(object):
+    """Class used for representing a boolean `numpy.ndarray` object as a
+    bit array.
+
+    This class is intended for serialization of NumPy arrays, used to
+    store link selections in the links state classes.
+
+    """
+    def __init__(self, array):
+        ba = bitarray.bitarray()
+        ba.pack(array.tostring())
+        self.arr = ba.tostring()
+        self.shape = array.shape
+        self.size = array.size
+        self.hash_value = hash(self.arr)
+
+
+    def to_array(self):
+        """Converts the bit array back into a `numpy.ndarray`.
+
+        Returns a boolean NumPy array of the same content and shape as
+        the original.
+
+        """
+        ba = bitarray.bitarray()
+        ba.fromstring(self.arr)
+        ret = np.fromstring(ba.unpack(), dtype=np.bool)[:self.size]
+        return ret.reshape(self.shape)
+
+
+    def __cmp__(self, other):
+        return cmp(self.arr, other.arr)
+
+
+    def __hash__(self):
+        return self.hash_value
+
 

@@ -14,6 +14,7 @@ setup(
     author='Christopher D. Lasher',
     author_email='chris.lasher@gmail.com',
     install_requires=[
+        'bitarray',
         'ConflictsOptionParser',
         'ConvUtils',
         'fisher',

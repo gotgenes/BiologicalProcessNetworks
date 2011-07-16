@@ -1197,6 +1197,7 @@ class ArrayLinksState(PLNLinksState):
         self.link_selections = numpy.zeros(self._num_links, numpy.bool)
         self._process_seed_links(seed_links_indices)
         self._delta = None
+        self._serialization = None
 
 
     def _process_seed_links(self, seed_links=None):
@@ -1338,6 +1339,7 @@ class ArrayLinksState(PLNLinksState):
         logger.debug("Creating a new links state.")
         # First, get an identical copy of this state
         new_state = self.copy()
+        new_state._serialization = None
         # Then decide which type of transition we're going to do
         transition_cutoffs = self.calc_transition_cutoffs()
         transition_dice = random.random()
@@ -1363,6 +1365,17 @@ class ArrayLinksState(PLNLinksState):
             new_state.unselect_link(selected_link_index)
 
         return new_state
+
+
+    def serialize_state(self):
+        """Returns a representation of the state by which it can be
+        stored and later re-constituted.
+
+        """
+        if self._serialization is None:
+            self._serialization = bpn.structures.BoolBitArray(
+                    self.link_selections)
+        return self._serialization
 
 
 class NoSwapArrayLinksState(ArrayLinksState):
@@ -1410,6 +1423,7 @@ class NoSwapArrayLinksState(ArrayLinksState):
         logger.debug("Creating a new links state.")
         # First, get an identical copy of this state
         new_state = self.copy()
+        new_state._serialization = None
         # Then decide which type of transition we're going to do
         transition_cutoffs = self.calc_transition_cutoffs()
         transition_dice = random.random()
@@ -1501,6 +1515,7 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         self._process_seed_links(seed_links_indices)
 
         self._delta = None
+        self._serialization = None
 
 
     def copy(self):
@@ -1718,6 +1733,7 @@ class TermsAndLinksState(NoSwapArrayLinksState):
         logger.debug("Creating a new links state.")
         # First, get an identical copy of this state
         new_state = self.copy()
+        new_state._serialization = None
         random_link = new_state._draw_random_valid_link()
         if new_state.link_selections[random_link]:
             # Remove the link if it's already a candidate.
@@ -1943,6 +1959,7 @@ class IndependentTermsAndLinksState(TermsAndLinksState):
         logger.debug("Creating a new links state.")
         # First, get an identical copy of this state
         new_state = self.copy()
+        new_state._serialization = None
         # Calculate the ratio of terms-based transitions to link-based
         # transitions.
         transition_ratio = self._calc_transition_ratio()
@@ -2365,6 +2382,15 @@ class ArrayOverallState(PLNOverallState):
         # either the `links_state` or the `parameters_state`, depending
         # on which was used for the transition.
         self._delta = None
+
+
+    def serialize_state(self):
+        """Returns a representation of the state by which it can be
+        stored and later re-constituted.
+
+        """
+        # TODO: Include the parameters state.
+        return self.links_state.serialize_state()
 
 
 class TermsBasedOverallState(ArrayOverallState):
