@@ -27,7 +27,7 @@ OUTFILE_FIELDS = (
         'intersection',
         'union',
         'jaccard',
-        'p_value'
+        'fishers_exact'
 )
 
 
