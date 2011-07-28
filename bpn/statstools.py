@@ -115,17 +115,21 @@ def calc_benjamini_hochberg_corrections(p_values, num_total_tests):
         yield bh_value
 
 
-def calculate_overlap_scores(gene_set1, gene_set2,
-        num_total_genes):
+def calculate_overlap_scores(
+        set1,
+        set2,
+        universe_size=None
+    ):
     """
-    Performs several tests to determine if the overlap in the gene
-    sets is significantly higher than expected by chance.
+    Calculates several measures of overlap of two sets.
 
     Returns a a dictionary of the following structure:
         `{
             'set1_size': ...,
             'set2_size': ...,
             'intersection': ...,
+            'intersection_by_set1': ...,
+            'intersection_by_set2': ...,
             'union': ...,
             'jaccard': ...,
             'fishers_exact': ...
@@ -133,55 +137,72 @@ def calculate_overlap_scores(gene_set1, gene_set2,
 
     Here, ``'fishers_exact'`` represents the result of Fisher's Exact
     Test, a floating point probability between 0 and 1, inclusive;
-    `'jaccard'` represents the Jaccard Index, also a floating point
+    ``'jaccard'`` represents the Jaccard Index, also a floating point
     value between 0 and 1, inclusive. The set sizes are
-    self-explanatory.  `'intersection'` and `'union'` represent the size
-    of the intersection and union, respectively, of the two sets.
+    self-explanatory.  ``'intersection'`` and ``'union'`` represent the
+    size of the intersection and union, respectively, of the two sets.
+    ``'intersection_by_set1'`` and ``'intersection_by_set2'`` are the
+    values for the size of the intersection divided by the size of the
+    first and second set, respectively.
 
     :Parameters:
-    - `gene_set1`: `set` or `frozenset` instance of gene names
-    - `gene_set2`: `set` or `frozenset` instance of gene names
-    - `num_total_genes`: should be the total number of genes in the
-      "universe" of the gene sets
+    - `set1`: `set` or `frozenset` instance
+    - `set2`: `set` or `frozenset` instance
+    - `universe_size`: the total number of elements in the
+      "universe" of the sets; if provided, will calculate the
+      right-tailed Fisher's exact test p-value for the size of the
+      intersection of the two sets.
 
     """
-    try:
-        fisher
-    except NameError:
-        raise MissingRequiredLibrariesError("fisher must be installed "
-                "to use this function!")
-
     scores = {
-            'set1_size': len(gene_set1),
-            'set2_size': len(gene_set2)
+            'set1_size': len(set1),
+            'set2_size': len(set2)
     }
-
-    if num_total_genes < 1:
-        raise ValueError("num_total_genes is %s should be at least "
-                "1" % num_total_genes)
-    num_1_and_2 = len(gene_set1.intersection(gene_set2))
-    num_1_not_2 = len(gene_set1) - num_1_and_2
-    num_2_not_1 = len(gene_set2) - num_1_and_2
-    num_not_1_not_2 = num_total_genes - (num_1_and_2 + num_1_not_2 +
-            num_2_not_1)
-
-    assert num_1_and_2 >= 0
-    assert num_1_not_2 >= 0
-    assert num_2_not_1 >= 0
-    assert num_not_1_not_2 >= 0
-    fisher_pvalues = fisher.pvalue(num_1_and_2, num_1_not_2, num_2_not_1,
-            num_not_1_not_2)
-    scores['fishers_exact'] = fisher_pvalues.right_tail
-
-    union_size = len(gene_set1.union(gene_set2))
-    scores['intersection'] = num_1_and_2
+    intersection_size = len(set1.intersection(set2))
+    union_size = len(set1.union(set2))
+    scores['intersection'] = intersection_size
     scores['union'] = union_size
-    if gene_set1 or gene_set2:
-        jaccard_coefficient = num_1_and_2 / float(union_size)
+    if set1 or set2:
+        jaccard_coefficient = intersection_size / float(union_size)
     else:
         logger.debug('Received two sets with no members.')
         jaccard_coefficient = 0
     scores['jaccard'] = jaccard_coefficient
+    try:
+        intersection_by_set1 = float(intersection_size) / len(set1)
+    except ZeroDivisionError:
+        intersection_by_set1 = 0
+    try:
+        intersection_by_set2 = float(intersection_size) / len(set2)
+    except ZeroDivisionError:
+        intersection_by_set2 = 0
+    scores['intersection_by_set1'] = intersection_by_set1
+    scores['intersection_by_set2'] = intersection_by_set2
+
+    if universe_size is not None:
+        try:
+            fisher
+        except NameError:
+            raise MissingRequiredLibrariesError("The fisher package "
+                    "must be installed to use this function.")
+        if universe_size < 1:
+            raise ValueError(("universe_size is {0}, should be at "
+                    "least 1").format(universe_size))
+        num_1_not_2 = len(set1) - intersection_size
+        num_2_not_1 = len(set2) - intersection_size
+        num_not_1_not_2 = universe_size - (intersection_size + num_1_not_2 +
+                num_2_not_1)
+        assert intersection_size >= 0
+        assert num_1_not_2 >= 0
+        assert num_2_not_1 >= 0
+        assert num_not_1_not_2 >= 0
+        fisher_pvalues = fisher.pvalue(
+                intersection_size,
+                num_1_not_2,
+                num_2_not_1,
+                num_not_1_not_2
+        )
+        scores['fishers_exact'] = fisher_pvalues.right_tail
 
     return scores
 

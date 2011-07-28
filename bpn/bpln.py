@@ -27,7 +27,9 @@ OUTFILE_FIELDS = (
         'intersection',
         'union',
         'jaccard',
-        'fishers_exact'
+        'intersection_by_neighbors_of_term1',
+        'intersection_by_term2',
+        'fishers_exact',
 )
 
 
@@ -122,8 +124,14 @@ def calculate_linkage_scores(
         pair_scores['term1_size'] = len(annotated_i_genes)
         pair_scores['neighbors_of_term1'] = len(neighbors)
         pair_scores['term2_size'] = len(annotated_j_genes)
+        pair_scores['intersection_by_neighbors_of_term1'] = (
+                pair_scores['intersection_by_set1'])
+        pair_scores['intersection_by_term2'] = (
+                pair_scores['intersection_by_set2'])
         del pair_scores['set1_size']
         del pair_scores['set2_size']
+        del pair_scores['intersection_by_set1']
+        del pair_scores['intersection_by_set2']
 
         prev_annotation_i = annotation_i
 
