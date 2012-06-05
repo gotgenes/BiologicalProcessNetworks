@@ -287,7 +287,7 @@ class McmcArgParser(ExpressionBasedArgParser):
         self.cli_parser.add_option('--steps', type='int',
                 default=mcmc.defaults.NUM_STEPS,
                 help=("the number of steps through the Markov chain to "
-                    "observe")
+                    "observe [default: %default]")
         )
         self.cli_parser.add_option('--activity-threshold',
                 type='float',
