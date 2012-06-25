@@ -27,12 +27,25 @@ mcmcbpn
 
 
 ############
+Availability
+############
+
+PyBPN releases are available from the `Python Package Index`_ (`PyPI`_)
+at http://pypi.python.org/pypi/BiologicalProcessNetworks
+
+PyBPN's source code is hosted on `GitHub`_ at
+https://github.com/gotgenes/BiologicalProcessNetworks
+
+
+############
 Installation
 ############
 
 The recommended way to install PyBPN is through the Python package
-installer pip_, as it helps automagically manage dependencies. However,
+installer pip_, as it helps automagically manage dependencies, however,
 this document also provides instructions for manual installation.
+
+PyBPN has several third-party `dependencies`_, described below.
 
 
 .. _dependencies:
@@ -41,7 +54,7 @@ Dependencies
 ============
 
 PyBPN depends on the following Python versions and external Python
-Packages (all available from the `Python Package Index`_):
+Packages (all available from `PyPI`_):
 
 - Python **2.6** or **2.7**. Python 3 is not currently supported;
   Python 2.5 and lower are unsupported. Check your Python version with
@@ -69,19 +82,31 @@ dependencies that are not yet installed on your system or which require
 upgrading.
 
 
+System-wide installation for users with administrative access
+-------------------------------------------------------------
+
+If you have administrative (e.g., sudo) access on your system, you may
+install PyBPN system-wide with
+
+::
+
+  sudo pip install BiologicalProcessNetworks
+
+If you have not installed NumPy before hand, you may encounter an error
+[3]_. In this case, try
+
+::
+
+  pip install numpy
+  pip install BiologicalProcessNetworks
+
+
 Local installation for non-privileged users
 -------------------------------------------
 
 If you do not have administrative, or do not wish to make a system-wide
 installation of PyBPN, you can still install PyBPN and all its dependencies
-using either a virtual enviroment or the user site-packages
-installation.
-
-User site-packages installation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Users without admin privileges who desire a simple local installation
-may do so by running
+using the user site-packages installation.
 
 ::
 
@@ -94,17 +119,6 @@ If you have not installed NumPy before hand, you may encounter an error
 
   pip install --user numpy
   pip install --user BiologicalProcessNetworks
-
-
-System-wide installation for users with administrative access
--------------------------------------------------------------
-
-If you have administrative (e.g., sudo) access on your system, you may
-install PyBPN system-wide with
-
-::
-
-  sudo pip install BiologicalProcessNetworks
 
 
 Manual Installation
@@ -316,6 +330,7 @@ Parameters File
 
 .. _PyPI:
 .. _Python Package Index: http://pypi.python.org/
+.. _GitHub: https://github.com/
 .. _pip: http://pypi.python.org/pypi/pip
 .. _virtualenv: http://pypi.python.org/pypi/virtualenv
 .. _virtualenvwrapper: http://www.doughellmann.com/projects/virtualenvwrapper/
