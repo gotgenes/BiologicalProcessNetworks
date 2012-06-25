@@ -10,7 +10,7 @@ scripts = [os.path.sep.join(('scripts', script)) for script in scripts]
 
 setup(
     name='BiologicalProcessNetworks',
-    version='0.1.0',
+    version='1.0a1',
     author='Christopher D. Lasher',
     author_email='chris.lasher@gmail.com',
     install_requires=[
@@ -35,6 +35,7 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Topic :: Scientific/Engineering :: Bio-Informatics'
     ],
-    description=("Determine connections between biological processes."),
+    description=("Identify significant connections between "
+            "biological processes using gene interaction networks."),
     long_description=open('README.rst').read(),
 )
