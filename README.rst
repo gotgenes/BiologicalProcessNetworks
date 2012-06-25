@@ -13,12 +13,12 @@ different objectives:
 
 bpln
   Determines if processes are generally connected; an implementation of
-  the algorithm described by Dikla Dotan-Cohen, *et al.* [1]_.
+  the algorithm described by Dotan-Cohen *et al.* [1]_.
 
 cbpn
   Determines whether, under a particular comparison of conditions,
   connections between processes are perturbed; an implementation of the
-  algorithm described by Christopher Lasher, *et al.* [2]_.
+  algorithm described by Lasher *et al.* [2]_.
 
 mcmcbpn
   Similar to ``cbpn``, but attempts to discover the smallest set of
@@ -159,6 +159,7 @@ network as possible, using as few process-process links as possible.
 effectively consider all possible links simultaneously and select an
 optimal subset of them.
 
+
 Basic Usage
 -----------
 
@@ -273,8 +274,8 @@ for ``mcmcbpn``.
   be logged [default: ``mcmcbpn-TIMESTAMP.log``]
 
 
-MCMCBPN Output
---------------
+Output
+------
 
 The two principal files output by ``mcmcbpn`` are the links outfile and
 the parameters outfile.
