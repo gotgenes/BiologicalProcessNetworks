@@ -61,7 +61,7 @@ Packages (all available from `PyPI`_):
   ``python --version``. Obtain newer releases of Python from
   http://python.org/download/
 - ConflictsOptionParser_
-- ConvUtils_
+- ConvUtils_ (v.1.1; currently v.2.0 is unsupported)
 - fisher_
 - NetworkX_ (v.1.0 or greater)
 - SciPy_ (which depends on NumPy_)

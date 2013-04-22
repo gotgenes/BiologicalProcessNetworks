@@ -10,7 +10,7 @@ scripts = [os.path.sep.join(('scripts', script)) for script in scripts]
 
 setup(
     name='BiologicalProcessNetworks',
-    version='1.0a3',
+    version='1.0a4',
     author='Christopher D. Lasher',
     author_email='chris.lasher@gmail.com',
     install_requires=[
