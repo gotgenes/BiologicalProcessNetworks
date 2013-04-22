@@ -16,7 +16,7 @@ setup(
     install_requires=[
         'bitarray',
         'ConflictsOptionParser',
-        'ConvUtils',
+        'ConvUtils<2.0',
         'fisher',
         'networkx>=1.0',
         'numpy',
