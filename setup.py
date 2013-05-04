@@ -3,14 +3,14 @@
 
 from setuptools import setup
 
-import os.path
+import os
 
-scripts = ['bpln', 'cbpn', 'mcmcbpn', 'sabpn']
+scripts = os.listdir(os.sep.join((os.path.dirname(__file__), 'scripts')))
 scripts = [os.path.sep.join(('scripts', script)) for script in scripts]
 
 setup(
     name='BiologicalProcessNetworks',
-    version='1.0a4',
+    version='1.0a5',
     author='Christopher D. Lasher',
     author_email='chris.lasher@gmail.com',
     install_requires=[
