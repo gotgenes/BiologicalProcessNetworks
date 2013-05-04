@@ -5,7 +5,7 @@ from setuptools import setup
 
 import os
 
-scripts = os.listdir(os.sep.join((os.path.dirname(__file__), 'scripts')))
+scripts = os.listdir('scripts')
 scripts = [os.path.sep.join(('scripts', script)) for script in scripts]
 
 setup(
