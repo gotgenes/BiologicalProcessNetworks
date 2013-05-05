@@ -20,8 +20,7 @@ import sys
 from convutils import convutils
 import pygraphviz
 
-from bpn import parsers
-import qvaluetocolor
+from bpn import parsers, qvaluetocolor
 
 # Configure all the logging stuff
 import logging
